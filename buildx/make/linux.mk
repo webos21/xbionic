@@ -21,7 +21,7 @@
 # Desc    : MK file for LINUX build.                 #
 #----------------------------------------------------#
 # History)                                           #
-#   - 2020/03/01 : Created by cmjo                   #
+#   - 2022/01/10 : Created by cmjo                   #
 ######################################################
 
 ########################
@@ -40,6 +40,7 @@ CHMOD = chmod
 build_cfg_target  = linux
 build_cfg_linux   = 1
 build_cfg_posix   = 1
+build_cfg_arch    = x86_64
 
 
 ########################
@@ -64,7 +65,7 @@ build_tool_strip  =
 # Compile Flags
 ########################
 build_run_a       = 1
-build_run_so      =
+build_run_so      = 1
 
 build_opt_a_pre   = lib
 build_opt_a_ext   = a
@@ -72,10 +73,9 @@ build_opt_so_pre  = lib
 build_opt_so_ext  = so
 build_opt_exe_ext =
 
-build_opt_c       = -g -Wall -Wextra -Wdeclaration-after-statement -O3 -fstack-usage -ffunction-sections -fdata-sections -D_REENTRANT -D_THREAD_SAFE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64
-build_opt_cxx     = -g -Wall -Wextra -O3 -fstack-usage -ffunction-sections -fdata-sections -D_REENTRANT -D_THREAD_SAFE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64
+build_opt_c       = -g -Wall -Wextra -Wdeclaration-after-statement -O3 -nostdinc -fstack-usage -ffunction-sections -fdata-sections -D_REENTRANT -D_THREAD_SAFE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64
+build_opt_cxx     = -g -Wall -Wextra -O3 -nostdinc -fstack-usage -ffunction-sections -fdata-sections -D_REENTRANT -D_THREAD_SAFE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64
 build_opt_ld      = -g -Wl,--no-undefined -Wl,--gc-sections
-build_opt_ld_noud = -Wl,--no-undefined
 
 build_opt_fPIC    = -fPIC
 build_opt_mnocyg  = 
@@ -88,15 +88,8 @@ build_opt_inc     = $(basedir)/include
 ########################
 # Build Flags
 ########################
-build_ext_run_mbedtls        = 1
-build_ext_run_mbedtls_compat = 1
-build_ext_run_coap           = 1
-build_ext_run_mqtt           = 1
-build_ext_run_qcbor          = 1
-
-build_example_coap           = 1
-build_example_http           = 1
-build_example_mqtt           = 1
-build_example_websocket      = 1
-build_example_iplt           = 1
-
+build_pbionic_run_libc       = 1
+build_pbionic_run_libdl      = 1
+build_pbionic_run_fdtrack    = 1
+build_pbionic_run_libstdc++  = 1
+build_pbionic_run_linker     = 1

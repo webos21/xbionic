@@ -33,6 +33,7 @@
 
 # Directory
 /out
+/.vscode
 
 # MacOS
 .DS_Store
