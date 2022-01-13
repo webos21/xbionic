@@ -64,9 +64,8 @@ module_build_cflags    = \
 		-fno-stack-protector             \
 		-ffreestanding                   \
         -I.                              \
-		-Ibionic/libc/async_safe/include \
-		-Ibionic/libc/platform           \
-		-Isystem/core/libcutils/include  \
+		-Iasync_safe/include             \
+		-Iplatform                       \
 		-Ikernel/uapi                    \
 		-Ikernel/android/uapi            \
         -Iinclude
