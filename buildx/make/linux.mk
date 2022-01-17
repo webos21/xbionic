@@ -27,11 +27,7 @@
 ########################
 # Programs
 ########################
-CP = cp
-RM = rm -f
-MKDIR = mkdir
-TAR = tar
-CHMOD = chmod
+include $(basedir)/buildx/make/cmd.mk
 
 
 ########################
@@ -73,16 +69,22 @@ build_opt_so_pre  = lib
 build_opt_so_ext  = so
 build_opt_exe_ext =
 
-build_opt_c       = -g -Wall -Wextra -Wdeclaration-after-statement -O3 -nostdinc -fstack-usage -ffunction-sections -fdata-sections -D_REENTRANT -D_THREAD_SAFE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64
-build_opt_cxx     = -g -Wall -Wextra -O3 -nostdinc -fstack-usage -ffunction-sections -fdata-sections -D_REENTRANT -D_THREAD_SAFE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64
-build_opt_ld      = -g -Wl,--no-undefined -Wl,--gc-sections
-
+build_opt_c       = -g -O3 \
+                    -Wall -Wextra -Wdeclaration-after-statement \
+                    -fstack-usage -ffunction-sections -fdata-sections \
+                    -D_REENTRANT -D_THREAD_SAFE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64
+build_opt_cxx     = -g -O3 \
+                    -Wall -Wextra \
+                    -fstack-usage -ffunction-sections -fdata-sections \
+                    -fno-exceptions -fno-rtti \
+                    -D_REENTRANT -D_THREAD_SAFE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64
+build_opt_ld      = -g \
+                    -Wl,--no-undefined \
+					-Wl,--gc-sections
 build_opt_fPIC    = -fPIC
 build_opt_mnocyg  = 
 build_opt_libgcc  =
 build_opt_libgxx  = 
-
-build_opt_inc     = $(basedir)/include
 
 
 ########################

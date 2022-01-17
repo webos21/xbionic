@@ -28,9 +28,6 @@
 basedir = ..
 destdir = out
 
-# PREPARE : shell commands
-include $(basedir)/buildx/make/cmd.mk
-
 # PREPARE : Check Environment
 ifeq ($(TARGET),)
 need_warning = "Warning : you are here without proper command!!!!"

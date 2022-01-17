@@ -34,6 +34,13 @@ include $(basedir)/buildx/make/cmd.mk
 # Android Bionic Source Directory
 xbionic_src = platform_bionic-android-vts-12.0_r2
 
+# Android Logging Source Directory
+xlogging_src = logging-platform-12.0.0_r1
+
+# Android Jemalloc Source Directory
+jemalloc_src = jemalloc-android11-platform-release
+
+
 # make targets
 all: usage
 

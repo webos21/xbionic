@@ -14,21 +14,21 @@
 #
 
 ######################################################
-#                      DeviceSDK                     #
+#                   xbionic Project                  #
 #----------------------------------------------------#
 # File    : project.mk                               #
 # Version : 1.0.0                                    #
 # Desc    : properties for Project.                  #
 #----------------------------------------------------#
 # History)                                           #
-#   - 2020/03/21 : Created by cmjo                   #
+#   - 2022/01/10 : Created by cmjo                   #
 ######################################################
 
-project_name       = DeviceSDK
+project_name       = xbionic
 
-project_date       = 2020-03
-project_date_year  = 2020
-project_date_month = 03
+project_date       = 2022-01
+project_date_year  = 2022
+project_date_month = 01
 
 project_ver_target = dev
 project_ver_major  = 1
@@ -37,4 +37,4 @@ project_ver_build  = 0
 project_ver_number = ${project_ver_major}_${project_ver_minor}_${project_ver_build}
 project_version    = ${project_ver_number}-${project_ver_target}
 
-project_def_target = linux
+project_def_target = macos

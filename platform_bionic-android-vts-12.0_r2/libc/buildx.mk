@@ -28,9 +28,6 @@
 basedir = ../..
 destdir = out
 
-# PREPARE : shell commands
-include $(basedir)/buildx/make/cmd.mk
-
 # PREPARE : Check Environment
 ifeq ($(TARGET),)
 need_warning = "Warning : you are here without proper command!!!!"
@@ -58,25 +55,36 @@ module_dir_output_lib  = $(module_dir_output_base)/lib
 module_dir_output_res  = $(module_dir_output_base)/res
 module_dir_output_test = $(module_dir_output_base)/test
 
-# PREPARE : Build Options
+# PREPARE : CFLAGS
 module_build_cflags    = \
+        -ffreestanding                   \
+        -fno-stack-check                 \
+        -fno-stack-protector             \
         -fno-emulated-tls                \
-		-fno-stack-protector             \
-		-ffreestanding                   \
+        -mno-stack-arg-probe             \
+		-D_LIBC=1                        \
+		-D_GNU_SOURCE                    \
+		-DUSE_SCUDO                      \
         -I.                              \
-		-Iasync_safe/include             \
-		-Iplatform                       \
-		-Ikernel/uapi                    \
-		-Ikernel/android/uapi            \
-        -Iinclude
+        -Iinclude                        \
+        -Iasync_safe/include             \
+        -Iplatform                       \
+        -Ikernel/uapi                    \
+        -Ikernel/android/uapi            \
+        -I$(basedir)/logging-platform-12.0.0_r1/liblog/include \
+		-I$(basedir)/jemalloc-android11-platform-release/include
+
 ifeq ($(build_cfg_arch),arm64)
-module_build_cflags += -Ikernel/uapi/asm-arm64
+module_build_cflags += \
+        -Ikernel/uapi/asm-arm64
 endif
 ifeq ($(build_cfg_arch),x86_64)
-module_build_cflags += -Ikernel/uapi/asm-x86
+module_build_cflags += \
+        -Ikernel/uapi/asm-x86
 endif
 
-module_build_ldflags   = 
+# PREPARE : LDFLAGS
+module_build_ldflags   = -nostdlib
 
 
 # PREPARE : Source Variables
