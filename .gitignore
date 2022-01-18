@@ -38,3 +38,6 @@
 # MacOS
 .DS_Store
 
+# Local Configurations
+/build.conf.bat
+/build.conf
