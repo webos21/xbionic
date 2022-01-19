@@ -68,12 +68,13 @@ build_opt_so_ext  = so
 build_opt_exe_ext =
 
 build_opt_c       = -g -O3 \
+                    -std=gnu99 \
                     -Wall -Wextra -Wdeclaration-after-statement \
                     -ffunction-sections -fdata-sections \
                     -D_REENTRANT -D_THREAD_SAFE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64
 build_opt_cxx     = -g -O3 \
+                    -std=gnu++17 \
                     -Wall -Wextra \
-                    -std=c++11 \
                     -ffunction-sections -fdata-sections \
                     -fno-exceptions -fno-rtti \
 					-D_REENTRANT -D_THREAD_SAFE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64

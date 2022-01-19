@@ -127,10 +127,18 @@ libc_tzcode = \
         tzcode/bionic.cpp         \
         upstream-openbsd/lib/libc/time/wcsftime.c
 
+
 # PREPARE : Set VPATH!!
 vpath
-vpath %.c bionic stdio arm64/bionic arch-x86_64/bionic tzcode
-vpath %.cpp bionic stdio arm64/bionic arch-x86_64/bionic tzcode
+ifeq ($(build_cfg_arch),arm64)
+vpath %.c bionic stdio arch-arm64/bionic tzcode
+vpath %.cpp bionic stdio arch-arm64/bionic tzcode
+endif
+ifeq ($(build_cfg_arch),x86_64)
+vpath %.c bionic stdio arch-x86_64/bionic tzcode
+vpath %.cpp bionic stdio arch-x86_64/bionic tzcode
+endif
+
 
 # PREPARE : Build Targets
 module_build_target_a  = $(build_opt_a_pre)c.$(build_opt_a_ext)
@@ -182,6 +190,7 @@ prepare_result:
 	@echo "                           libc"
 	@echo "================================================================"
 	@echo "TARGET                  : $(TARGET)"
+	@echo "ARCH                    : $(build_cfg_arch)"
 	@echo "----------------------------------------------------------------"
 	@echo "current_dir_abs         : $(current_dir_abs)"
 	@echo "current_dir_rel         : $(current_dir_rel)"

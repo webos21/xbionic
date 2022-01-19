@@ -42,19 +42,17 @@ build_cfg_arch    = x86_64
 ########################
 # Directories
 ########################
-build_tool_dir = /opt/fsl-imx-fb/4.1.15-2.0.1/sysroots/x86_64-pokysdk-linux/usr/bin/arm-poky-linux-gnueabi
-build_sys_root = /opt/fsl-imx-fb/4.1.15-2.0.1/sysroots/cortexa7hf-neon-poky-linux-gnueabi
+build_tool_dir = 
 
 
 ########################
 # Program Definition
 ########################
-build_tool_cc     = $(build_tool_dir)/arm-poky-linux-gnueabi-gcc
-build_tool_cxx    = $(build_tool_dir)/arm-poky-linux-gnueabi-g++
-build_tool_linker = $(build_tool_dir)/arm-poky-linux-gnueabi-g++
-build_tool_ar     = $(build_tool_dir)/arm-poky-linux-gnueabi-ar
-build_tool_ranlib = $(build_tool_dir)/arm-poky-linux-gnueabi-ranlib
-build_tool_strip  = $(build_tool_dir)/arm-poky-linux-gnueabi-strip
+build_tool_cc     = gcc
+build_tool_cxx    = g++
+build_tool_linker = g++
+build_tool_ar     = ar
+build_tool_ranlib = ranlib
 
 
 ########################
