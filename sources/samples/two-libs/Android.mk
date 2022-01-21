@@ -12,7 +12,30 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-# DO NOT MODIFY THIS FILE
-include buildx/make/lib/main.mk
-# END OF FILE
 
+# the purpose of this sample is to demonstrate how one can
+# generate two distinct shared libraries and have them both
+# uploaded in
+#
+
+LOCAL_PATH:= $(call my-dir)
+
+# first lib, which will be built statically
+#
+include $(CLEAR_VARS)
+
+LOCAL_MODULE    := libtwolib-first
+LOCAL_SRC_FILES := first.c
+
+include $(BUILD_STATIC_LIBRARY)
+
+# second lib, which will depend on and include the first one
+#
+include $(CLEAR_VARS)
+
+LOCAL_MODULE    := libtwolib-second
+LOCAL_SRC_FILES := second.c
+
+LOCAL_STATIC_LIBRARIES := libtwolib-first
+
+include $(BUILD_SHARED_LIBRARY)

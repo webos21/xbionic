@@ -12,7 +12,34 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-# DO NOT MODIFY THIS FILE
-include buildx/make/lib/main.mk
-# END OF FILE
 
+# this is a very simple example that shows how to build a static library
+# and an executable that links to it.
+#
+
+LOCAL_PATH:= $(call my-dir)
+include $(CLEAR_VARS)
+
+# measurements show that the ARM version of ZLib is about x1.17 faster
+# than the thumb one...
+LOCAL_ARM_MODE := arm
+
+LOCAL_SRC_FILES:= \
+	adler32.c \
+	compress.c \
+	crc32.c \
+	gzio.c \
+	uncompr.c \
+	deflate.c \
+	trees.c \
+	zutil.c \
+	inflate.c \
+	infback.c \
+	inftrees.c \
+	inffast.c
+
+LOCAL_MODULE:= libz
+
+LOCAL_CFLAGS+= -O3 -DUSE_MMAP
+
+include $(BUILD_STATIC_LIBRARY)

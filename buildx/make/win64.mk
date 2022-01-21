@@ -18,7 +18,7 @@
 #----------------------------------------------------#
 # File    : win64.mk                                 #
 # Version : 1.0.0                                    #
-# Desc    : MK file for LINUX build.                 #
+# Desc    : MK file for Win64 build.                 #
 #----------------------------------------------------#
 # History)                                           #
 #   - 2022/01/10 : Created by cmjo                   #

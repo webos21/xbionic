@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-# DO NOT MODIFY THIS FILE
-include buildx/make/lib/main.mk
-# END OF FILE
-
+# config file for the arm-eabi-4.2.1 toolchain for the Android NDK
+# the real meat is in the setup.mk file adjacent to this one
+#
+TOOLCHAIN_ABIS := arm

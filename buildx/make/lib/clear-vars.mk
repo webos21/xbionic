@@ -12,7 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-# DO NOT MODIFY THIS FILE
-include buildx/make/lib/main.mk
-# END OF FILE
-
+# this file is included repeatedly from Android.mk files in order to clean
+# the module-specific variables from the environment,
+NDK_LOCAL_VARS := \
+  LOCAL_MODULE \
+  LOCAL_SRC_FILES \
+  LOCAL_CFLAGS \
+  LOCAL_LDFLAGS \
+  LOCAL_ARFLAGS \
+  LOCAL_CPP_EXTENSION \
+  LOCAL_STATIC_LIBRARIES \
+  LOCAL_STATIC_WHOLE_LIBRARIES \
+  LOCAL_SHARED_LIBRARIES \
+  LOCAL_MAKEFILE \
+$(call clear-vars, $(NDK_LOCAL_VARS))
