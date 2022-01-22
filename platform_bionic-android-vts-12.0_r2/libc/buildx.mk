@@ -60,7 +60,6 @@ module_build_cflags    = \
         -ffreestanding                   \
         -fno-stack-check                 \
         -fno-stack-protector             \
-        -fno-emulated-tls                \
         -mno-stack-arg-probe             \
 		-D_LIBC=1                        \
 		-D_GNU_SOURCE                    \
@@ -73,6 +72,11 @@ module_build_cflags    = \
         -Ikernel/android/uapi            \
         -I$(basedir)/logging-platform-12.0.0_r1/liblog/include \
 		-I$(basedir)/jemalloc-android11-platform-release/include
+
+ifneq ($(build_cfg_arch),x86_64)
+module_build_cflags += \
+        -fno-emulated-tls
+endif
 
 ifeq ($(build_cfg_arch),arm64)
 module_build_cflags += \
