@@ -20,76 +20,41 @@
 # ====================================================================
 # Include common definitions
 include buildx/make/lib/definitions.mk
+
 # The location of the build system files
 BUILD_SYSTEM := buildx/make/lib
 # Where all generated files will be stored during a build
 NDK_OUT := out
-# Read the host-specific configuration file in $(NDK_OUT)
-#
-HOST_CONFIG_MAKE := $(NDK_OUT)/host/config.mk
-ifeq ($(strip $(wildcard $(HOST_CONFIG_MAKE))),)
-    $(call __ndk_info,\
-    The configuration file '$(HOST_CONFIG_MAKE)' doesnt' exist.)
-    $(call __ndk_info,\
-       Please run 'build/host-setup.sh' to generate it.)
-    $(call __ndk_error, Aborting)
-endif
-include $(HOST_CONFIG_MAKE)
-HOST_PREBUILT_TAG := $(HOST_TAG)
-# Location where all prebuilt binaries for a given host architectures
-# will be stored.
-HOST_PREBUILT := build/prebuilt/$(HOST_TAG)
 # Where all app-specific generated files will be stored
 NDK_APP_OUT := $(NDK_OUT)/apps
 # Where all host-specific generated files will be stored
 NDK_HOST_OUT := $(NDK_OUT)/host/$(HOST_TAG)
-# ====================================================================
-#
-# Read all toolchain-specific configuration files.
-#
-# Each toolchain must have a corresponding config.mk file located
-# in build/toolchains/<name>/ that will be included here.
-#
-# Each one of these files should define the following variables:
-#   TOOLCHAIN_NAME   toolchain name (e.g. arm-eabi-4.2.1)
-#   TOOLCHAIN_ABIS   list of target ABIs supported by the toolchain.
-#
-# Then, it should include $(ADD_TOOLCHAIN) which will perform
-# book-keeping for the build system.
-#
-# ====================================================================
-# the build script to include in each toolchain config.mk
-ADD_TOOLCHAIN := $(BUILD_SYSTEM)/add-toolchain.mk
-# the list of all toolchains in this NDK
-NDK_ALL_TOOLCHAINS :=
-NDK_ALL_ABIS       :=
-TOOLCHAIN_CONFIGS := $(wildcard buildx/make/toolchains/*/config.mk)
-$(foreach _config_mk,$(TOOLCHAIN_CONFIGS),\
-  $(eval include $(BUILD_SYSTEM)/add-toolchain.mk)\
-)
-#$(info NDK_ALL_TOOLCHAINS=$(NDK_ALL_TOOLCHAINS))
-NDK_TARGET_TOOLCHAIN := $(firstword $(NDK_ALL_TOOLCHAINS))
-$(call ndk_log, Default toolchain is $(NDK_TARGET_TOOLCHAIN))
-NDK_ALL_TOOLCHAINS   := $(call uniq,$(NDK_ALL_TOOLCHAINS))
-NDK_ALL_ABIS         := $(call uniq,$(NDK_ALL_ABIS))
-$(call ndk_log, This NDK supports the following toolchains and target ABIs:)
-$(foreach tc,$(NDK_ALL_TOOLCHAINS),\
-    $(call ndk_log, $(space)$(space)$(tc):  $(NDK_TOOLCHAIN.$(tc).abis))\
-)
+
+# PREPARE : Check Environment
+ifeq ($(TARGET),)
+$(call __ndk_info,Warning : you are here without proper command!!!!)
+include buildx/make/project.mk
+include buildx/make/$(project_def_target).mk
+TARGET = $(project_def_target)
+else
+include buildx/make/project.mk
+include buildx/make/$(TARGET).mk
+endif
 
 $(call __ndk_info,TOOLCHAIN_NAME   = '$(TOOLCHAIN_NAME)')
-
-APP := hello-jni
-NDK_APPS := $(APP)
-NDK_ALL_APPS := hello-jni
-NDK_APP_VARS := APP_MODULES APP_PROJECT_PATH
-NDK_APP.hello-jni.Application.mk := apps/hello-jni/Application.mk
-NDK_APP.hello-jni.APP_MODULES := hello-jni
-NDK_APP.hello-jni.APP_PROJECT_PATH := apps/hello-jni/project
 
 $(call __ndk_info,APP              = '$(APP)')
 $(call __ndk_info,NDK_APPS         = '$(NDK_APPS)')
 $(call __ndk_info,NDK_ALL_APPS     = '$(NDK_ALL_APPS)')
+$(call __ndk_info,NDK_APP_VARS     = '$(NDK_APP_VARS)')
+$(call __ndk_info,NDK_APP_OUT      = '$(NDK_APP_OUT)')
+$(call __ndk_info,NDK_APP.hello-jni.Application.mk   = '$(NDK_APP.hello-jni.Application.mk)')
+$(call __ndk_info,NDK_APP.hello-jni.APP_MODULES       = '$(NDK_APP.hello-jni.APP_MODULES)')
+$(call __ndk_info,NDK_APP.hello-jni.APP_PROJECT_PATH  = '$(NDK_APP.hello-jni.APP_PROJECT_PATH)')
+
+$(call __ndk_info,TARGET_TOOLCHAIN              = '$(TARGET_TOOLCHAIN)')
+$(call __ndk_info,TARGET_PLATFORM         = '$(TARGET_PLATFORM)')
+$(call __ndk_info,TARGET_ARCH_ABI     = '$(TARGET_ARCH_ABI)')
 $(call __ndk_info,NDK_APP_VARS     = '$(NDK_APP_VARS)')
 $(call __ndk_info,NDK_APP_OUT      = '$(NDK_APP_OUT)')
 $(call __ndk_info,NDK_APP.hello-jni.Application.mk   = '$(NDK_APP.hello-jni.Application.mk)')
@@ -152,11 +117,10 @@ all: installed_modules host_libraries host_executables
 # XXX: For now, only support one platform and one target ABI with
 #      only one toolchain.
 #
-TARGET_PLATFORM  := android-1.5
-TARGET_ARCH_ABI  := arm
-TARGET_ARCH      := arm
-TARGET_TOOLCHAIN := $(NDK_TARGET_TOOLCHAIN)
-include buildx/make/lib/setup-toolchain.mk
+
+$(foreach _app,$(NDK_APPS),\
+  $(eval include $(BUILD_SYSTEM)/setup-app.mk)\
+)
 
 # ====================================================================
 #

@@ -27,69 +27,112 @@
 ########################
 # Programs
 ########################
-include $(basedir)/buildx/make/cmd.mk
+#include $(basedir)/buildx/make/cmd.mk
 
 
 ########################
-# Build Configuration
+# Host Configuration
 ########################
-build_cfg_target  = win64
-build_cfg_linux   = 1
-build_cfg_posix   = 1
-build_cfg_arch    = x86_64
-
-
-########################
-# Directories
-########################
-build_tool_dir = 
-
-
-########################
-# Program Definition
-########################
-build_tool_cc     = gcc
-build_tool_cxx    = g++
-build_tool_linker = g++
-build_tool_ar     = ar
-build_tool_ranlib = ranlib
-
+HOST_OS       := windows
+HOST_ARCH     := x86_64
+HOST_TAG      := windows-x86_64
+HOST_NUM_CPUS := 4
+HOST_CC       := gcc
+HOST_CFLAGS   := -mno-cygwin
+HOST_CXX      := g++
+HOST_CXXFLAGS := 
+HOST_LD       := ld
+HOST_LDFLAGS  := -mno-cygwin
+HOST_AR       := ar
+HOST_ARFLAGS  := 
 
 ########################
-# Compile Flags
+# Toolchain Configuration
 ########################
-build_run_a       = 1
-build_run_so      = 1
-
-build_opt_a_pre   = 
-build_opt_a_ext   = a
-build_opt_so_pre  = 
-build_opt_so_ext  = dll
-build_opt_exe_ext =
-
-build_opt_c       = -g -O3 \
-                    -Wall -Wextra -Wdeclaration-after-statement \
-                    -fstack-usage -ffunction-sections -fdata-sections \
-                    -D_REENTRANT -D_THREAD_SAFE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64
-build_opt_cxx     = -g -O3 \
-                    -Wall -Wextra \
-                    -fstack-usage -ffunction-sections -fdata-sections \
-                    -fno-exceptions -fno-rtti \
-                    -D_REENTRANT -D_THREAD_SAFE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64
-build_opt_ld      = -g \
-                    -Wl,--no-undefined \
-                    -Wl,--gc-sections
-build_opt_fPIC    = -fPIC
-build_opt_mnocyg  = 
-build_opt_libgcc  =
-build_opt_libgxx  = 
-
+TOOLCHAIN_ABIS   := x86_64
+TOOLCHAIN_NAME   := win64
+TOOLCHAIN_PREFIX := 
 
 ########################
-# Build Flags
+# Build-Options Configuration
 ########################
-build_pbionic_run_libc       = 1
-build_pbionic_run_libdl      = 1
-build_pbionic_run_fdtrack    = 1
-build_pbionic_run_libstdc++  = 1
-build_pbionic_run_linker     = 1
+TARGET_TOOLCHAIN := arm-eabi-4.2.1
+TARGET_CFLAGS.common := \
+    -g -O3 \
+    -Wall -Wextra \
+    -fPIC -fstack-usage -ffunction-sections -fdata-sections \
+    -D_REENTRANT -D_THREAD_SAFE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64
+TARGET_arm_release_CFLAGS :=  -O2 \
+                              -fomit-frame-pointer \
+                              -fstrict-aliasing    \
+                              -funswitch-loops     \
+                              -finline-limit=300
+TARGET_thumb_release_CFLAGS := -mthumb \
+                               -Os \
+                               -fomit-frame-pointer \
+                               -fno-strict-aliasing \
+                               -finline-limit=64
+# When building for debug, compile everything as arm.
+TARGET_arm_debug_CFLAGS := $(TARGET_arm_release_CFLAGS) \
+                           -fno-omit-frame-pointer \
+                           -fno-strict-aliasing
+TARGET_thumb_debug_CFLAGS := $(TARGET_thumb_release_CFLAGS) \
+                             -marm \
+                             -fno-omit-frame-pointer
+TARGET_CC       := $(TOOLCHAIN_PREFIX)gcc
+TARGET_CFLAGS   := $(TARGET_CFLAGS.common) -Wdeclaration-after-statement
+TARGET_CXX      := $(TOOLCHAIN_PREFIX)g++
+TARGET_CXXFLAGS := $(TARGET_CFLAGS.common) -fno-exceptions -fno-rtti
+TARGET_LD       := $(TOOLCHAIN_PREFIX)ld
+TARGET_LDFLAGS  :=
+TARGET_AR       := $(TOOLCHAIN_PREFIX)ar
+TARGET_ARFLAGS  := crs
+TARGET_LIBGCC   := $(shell $(TARGET_CC) -print-libgcc-file-name)
+TARGET_LDLIBS   := -Wl,-rpath-link=$(SYSROOT)/usr/lib $(TARGET_LIBGCC)
+# The ABI-specific sub-directory that the SDK tools recognize for
+# this toolchain's generated binaries
+TARGET_ABI_SUBDIR := 
+define cmd-build-shared-library
+$(TARGET_CC) \
+    -nostdlib -Wl,-soname,$(notdir $@) \
+    -Wl,-shared,-Bsymbolic \
+    $(PRIVATE_OBJECTS) \
+    -Wl,--whole-archive \
+    $(PRIVATE_WHOLE_STATIC_LIBRARIES) \
+    -Wl,--no-whole-archive \
+    $(PRIVATE_STATIC_LIBRARIES) \
+    $(PRIVATE_SHARED_LIBRARIES) \
+    $(PRIVATE_LDFLAGS) \
+    $(PRIVATE_LDLIBS) \
+    -o $@
+endef
+define cmd-build-executable
+$(TARGET_CC) \
+    -nostdlib -Bdynamic \
+    -Wl,-dynamic-linker,/system/bin/linker \
+    -Wl,--gc-sections \
+    -Wl,-z,nocopyreloc \
+    $(PRIVATE_SHARED_LIBRARIES) \
+    $(TARGET_CRTBEGIN_DYNAMIC_O) \
+    $(PRIVATE_OBJECTS) \
+    $(PRIVATE_STATIC_LIBRARIES) \
+    $(PRIVATE_LDFLAGS) \
+    $(PRIVATE_LDLIBS) \
+    $(TARGET_CRTEND_O) \
+    -o $@
+endef
+define cmd-build-static-library
+$(TARGET_AR) $(TARGET_ARFLAGS) $@ $(PRIVATE_OBJECTS)
+endef
+cmd-strip = $(TOOLCHAIN_PREFIX)strip --strip-debug $1
+
+########################
+# Build-Target Configuration
+########################
+APP := hello-jni
+NDK_APPS := $(APP)
+NDK_ALL_APPS := hello-jni
+NDK_APP_VARS := APP_MODULES APP_PROJECT_PATH
+NDK_APP.hello-jni.Application.mk := apps/hello-jni/Application.mk
+NDK_APP.hello-jni.APP_MODULES := hello-jni
+NDK_APP.hello-jni.APP_PROJECT_PATH := apps/hello-jni/project
