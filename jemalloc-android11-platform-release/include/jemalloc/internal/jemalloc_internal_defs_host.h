@@ -96,6 +96,7 @@
  */
 /* #undef JEMALLOC_HAVE_PTHREAD_ATFORK */
 
+#ifndef __APPLE__
 /*
  * Defined if clock_gettime(CLOCK_MONOTONIC_COARSE, ...) is available.
  */
@@ -105,11 +106,12 @@
  * Defined if clock_gettime(CLOCK_MONOTONIC, ...) is available.
  */
 #define JEMALLOC_HAVE_CLOCK_MONOTONIC 1
-
+#else
 /*
  * Defined if mach_absolute_time() is available.
  */
-/* #undef JEMALLOC_HAVE_MACH_ABSOLUTE_TIME */
+#define JEMALLOC_HAVE_MACH_ABSOLUTE_TIME 1
+#endif
 
 /*
  * Defined if _malloc_thread_cleanup() exists.  At least in the case of
@@ -284,7 +286,9 @@
  * arguments to madvise(2).
  */
 /* ANDROID: Do not enable huge pages because it can increase PSS. */
+#ifndef __APPLE__
 #define JEMALLOC_THP 
+#endif
 
 /* Define if operating system has alloca.h header. */
 #define JEMALLOC_HAS_ALLOCA_H 1

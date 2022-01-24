@@ -57,9 +57,9 @@ TOOLCHAIN_PREFIX :=
 # Build-Options Configuration
 ########################
 TARGET_TOOLCHAIN := arm-eabi-4.2.1
-TARGET_PLATFORM  := android-1.5
-TARGET_ARCH_ABI  := arm
-TARGET_ARCH      := arm
+TARGET_PLATFORM  := macos
+TARGET_ARCH_ABI  := arm64
+TARGET_ARCH      := arm64
 
 TARGET_ABI := $(TARGET_PLATFORM)-$(TARGET_ARCH_ABI)
 # setup sysroot-related variables. The SYSROOT point to a directory
@@ -71,14 +71,14 @@ SYSROOT := build/platforms/$(TARGET_PLATFORM)/arch-$(TARGET_ARCH_ABI)
 TARGET_CRTBEGIN_STATIC_O  := $(SYSROOT)/usr/lib/crtbegin_static.o
 TARGET_CRTBEGIN_DYNAMIC_O := $(SYSROOT)/usr/lib/crtbegin_dynamic.o
 TARGET_CRTEND_O           := $(SYSROOT)/usr/lib/crtend_android.o
-TARGET_PREBUILT_SHARED_LIBRARIES := libc libstdc++ libm
-TARGET_PREBUILT_SHARED_LIBRARIES := $(TARGET_PREBUILT_SHARED_LIBRARIES:%=$(SYSROOT)/usr/lib/%.so)
+TARGET_PREBUILT_SHARED_LIBRARIES := 
+TARGET_PREBUILT_SHARED_LIBRARIES :=
 
 TARGET_CFLAGS.common := \
     -g -O3 \
     -Wall -Wextra \
-    -fPIC -fstack-usage -ffunction-sections -fdata-sections \
-    -D_REENTRANT -D_THREAD_SAFE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64
+    -fPIC -ffunction-sections -fdata-sections \
+    -D_DARWIN_C_SOURCE -D_REENTRANT -D_THREAD_SAFE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64
 TARGET_arm_release_CFLAGS :=  -O2 \
                               -fomit-frame-pointer \
                               -fstrict-aliasing    \
@@ -142,15 +142,3 @@ define cmd-build-static-library
 $(TARGET_AR) $(TARGET_ARFLAGS) $@ $(PRIVATE_OBJECTS)
 endef
 cmd-strip = $(TOOLCHAIN_PREFIX)strip --strip-debug $1
-
-
-########################
-# Build-Target Configuration
-########################
-APP := hello-jni
-NDK_APPS := $(APP)
-NDK_ALL_APPS := hello-jni
-NDK_APP_VARS := APP_MODULES APP_PROJECT_PATH
-NDK_APP.hello-jni.Application.mk := apps/hello-jni/Application.mk
-NDK_APP.hello-jni.APP_MODULES := hello-jni
-NDK_APP.hello-jni.APP_PROJECT_PATH := apps/hello-jni/project

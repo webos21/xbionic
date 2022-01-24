@@ -44,15 +44,11 @@ endif
 # compute NDK_APP_DEST as the destination directory for the generated files
 NDK_APP_DEST := $(NDK_APP_PROJECT_PATH)/libs/$(TARGET_ABI_SUBDIR)
 
+$(call __ndk_info,NDK_APP_DEST = '$(NDK_APP_DEST)')
+
 # make the application depend on the modules it requires
 .PHONY: ndk-app-$(_app)
 ndk-app-$(_app): $(NDK_APP_MODULES)
 all: ndk-app-$(_app)
 # free the dictionary of LOCAL_MODULE definitions
 $(call modules-clear)
-# now parse all Android.mk build files
-#
-# this will include stuff like build/core/static-library.mk and others
-# for each module to be defined.
-#
-include sources/*/Android.mk

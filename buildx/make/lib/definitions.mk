@@ -14,8 +14,9 @@
 #
 # Common definitions for the Android NDK build system
 #
+
 # We use the GNU Make Standard Library
-include buildx/make/gmsl/gmsl
+include $(basedir)/buildx/make/gmsl/gmsl
 # This is the Android NDK version number as a list of three items:
 # major, minor, revision
 #
@@ -92,7 +93,7 @@ this-makefile = $(lastword $(MAKEFILE_LIST))
 # Returns  : the name of the last parsed Android.mk file
 # Usage    : $(local-makefile)
 # -----------------------------------------------------------------------------
-local-makefile = $(lastword $(filter %Android.mk,$(MAKEFILE_LIST)))
+local-makefile = $(lastword $(filter %buildx.mk,$(MAKEFILE_LIST)))
 # -----------------------------------------------------------------------------
 # Function : assert-defined
 # Arguments: 1: list of variable names
@@ -337,7 +338,6 @@ $$(_OBJ): $$(_SRC) $$(LOCAL_MAKEFILE) $$(NDK_APP_APPLICATION_MK)
 	-MMD -MP -MF $$(PRIVATE_OBJ).d.tmp \
 	$$(PRIVATE_SRC) \
 	-o $$(PRIVATE_OBJ)
-	$$(call cmd-process-deps,$$(PRIVATE_OBJ))
 LOCAL_OBJECTS         += $$(_OBJ)
 LOCAL_DEPENDENCY_DIRS += $$(dir $$(_OBJ))
 endef
@@ -389,7 +389,6 @@ $$(_OBJ): $$(_SRC) $$(LOCAL_MAKEFILE) $$(NDK_APP_APPLICATION_MK)
 	-MMD -MP -MF $$(PRIVATE_OBJ).d.tmp \
 	$$(PRIVATE_SRC) \
 	-o $$(PRIVATE_OBJ)
-	$$(call cmd-process-deps,$$(PRIVATE_OBJ))
 LOCAL_OBJECTS         += $$(_OBJ)
 LOCAL_DEPENDENCY_DIRS += $$(dir $$(_OBJ))
 endef

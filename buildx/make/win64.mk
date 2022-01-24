@@ -57,6 +57,23 @@ TOOLCHAIN_PREFIX :=
 # Build-Options Configuration
 ########################
 TARGET_TOOLCHAIN := arm-eabi-4.2.1
+TARGET_PLATFORM  := windows
+TARGET_ARCH_ABI  := x86_64
+TARGET_ARCH      := x86_64
+
+TARGET_ABI := $(TARGET_PLATFORM)-$(TARGET_ARCH_ABI)
+# setup sysroot-related variables. The SYSROOT point to a directory
+# that contains all public header files for a given platform, plus
+# some libraries and object files used for linking the generated
+# target files properly.
+#
+SYSROOT := build/platforms/$(TARGET_PLATFORM)/arch-$(TARGET_ARCH_ABI)
+TARGET_CRTBEGIN_STATIC_O  := $(SYSROOT)/usr/lib/crtbegin_static.o
+TARGET_CRTBEGIN_DYNAMIC_O := $(SYSROOT)/usr/lib/crtbegin_dynamic.o
+TARGET_CRTEND_O           := $(SYSROOT)/usr/lib/crtend_android.o
+TARGET_PREBUILT_SHARED_LIBRARIES := 
+TARGET_PREBUILT_SHARED_LIBRARIES :=
+
 TARGET_CFLAGS.common := \
     -g -O3 \
     -Wall -Wextra \
@@ -125,14 +142,3 @@ define cmd-build-static-library
 $(TARGET_AR) $(TARGET_ARFLAGS) $@ $(PRIVATE_OBJECTS)
 endef
 cmd-strip = $(TOOLCHAIN_PREFIX)strip --strip-debug $1
-
-########################
-# Build-Target Configuration
-########################
-APP := hello-jni
-NDK_APPS := $(APP)
-NDK_ALL_APPS := hello-jni
-NDK_APP_VARS := APP_MODULES APP_PROJECT_PATH
-NDK_APP.hello-jni.Application.mk := apps/hello-jni/Application.mk
-NDK_APP.hello-jni.APP_MODULES := hello-jni
-NDK_APP.hello-jni.APP_PROJECT_PATH := apps/hello-jni/project

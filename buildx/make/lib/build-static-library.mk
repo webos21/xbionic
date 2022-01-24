@@ -31,6 +31,14 @@ static_libraries := $(call map,static-library-path,$(LOCAL_STATIC_LIBRARIES))
 shared_libraries := $(call map,shared-library-path,$(LOCAL_SHARED_LIBRARIES)) \
                     $(TARGET_PREBUILT_SHARED_LIBRARIES)
 $(LOCAL_BUILT_MODULE): $(static_libraries) $(shared_libraries)
+
+$(call __ndk_info,local-makefile   = '$(local-makefile)')
+$(call __ndk_info,MAKEFILE_LIST    = '$(MAKEFILE_LIST)')
+$(call __ndk_info,LOCAL_MODULE     = '$(LOCAL_MODULE)')
+$(call __ndk_info,NDK_APP_MODULES  = '$(NDK_APP_MODULES)')
+$(call __ndk_info,static_libraries = '$(static_libraries)')
+$(call __ndk_info,shared_libraries = '$(shared_libraries)')
+
 LOCAL_LDLIBS := $(_module_libs) $(LOCAL_LDLIBS)
 $(LOCAL_BUILT_MODULE): PRIVATE_STATIC_LIBRARIES := $(static_libraries)
 $(LOCAL_BUILT_MODULE): PRIVATE_SHARED_LIBRARIES := $(shared_libraries)

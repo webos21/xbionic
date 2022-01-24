@@ -12,11 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-LOCAL_PATH := $(call my-dir)
+# DO NOT MODIFY THIS FILE
+include buildx/make/main.mk
+# END OF FILE
 
-include $(CLEAR_VARS)
-
-LOCAL_MODULE    := hello-jni
-LOCAL_SRC_FILES := hello-jni.c
-
-include $(BUILD_SHARED_LIBRARY)
