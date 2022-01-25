@@ -74,11 +74,7 @@ TARGET_CRTEND_O           := $(SYSROOT)/usr/lib/crtend_android.o
 TARGET_PREBUILT_SHARED_LIBRARIES := 
 TARGET_PREBUILT_SHARED_LIBRARIES :=
 
-TARGET_CFLAGS.common := \
-    -g -O3 \
-    -Wall -Wextra \
-    -fPIC -ffunction-sections -fdata-sections \
-    -D_DARWIN_C_SOURCE -D_REENTRANT -D_THREAD_SAFE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64
+TARGET_CFLAGS.common := -fPIC -ffunction-sections -fdata-sections
 TARGET_arm_release_CFLAGS :=  -O2 \
                               -fomit-frame-pointer \
                               -fstrict-aliasing    \

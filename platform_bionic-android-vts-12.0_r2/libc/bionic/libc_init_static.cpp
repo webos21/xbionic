@@ -158,7 +158,8 @@ static void layout_static_tls(KernelArgumentBlock& args) {
     layout.reserve_exe_segment_and_tcb(nullptr, progname);
   }
   // Enable the fast path in __tls_get_addr.
-  __libc_tls_generation_copy = modules.generation;
+  // cmjo : fix!!
+  atomic_store(&__libc_tls_generation_copy, modules.generation);
 
   layout.finish_layout();
 }

@@ -44,6 +44,11 @@ __RCSID("$NetBSD: ev_streams.c,v 1.6 2009/04/12 17:07:17 christos Exp $");
 
 #include "port_after.h"
 
+// cmjo : add!!
+#ifndef UNUSED
+#define UNUSED(x) (void)(x)
+#endif
+
 #ifndef _LIBC
 static int	copyvec(evStream *str, const struct iovec *iov, int iocnt);
 static void	consume(evStream *str, size_t bytes);

@@ -31,7 +31,10 @@
 
 #include <string.h>
 
+/* cmjo commenting!! */
+/*
 typedef unsigned char u_char;
+*/
 
 /*
  * This array is designed for mapping upper and lower case letter

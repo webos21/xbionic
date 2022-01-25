@@ -51,7 +51,19 @@ NDK_APPS := $(APP)
 NDK_ALL_APPS := bionic
 NDK_APP_VARS := APP_MODULES APP_PROJECT_PATH
 NDK_APP.bionic.Application.mk := $(basedir)/apps/bionic/Application.mk
-NDK_APP.bionic.APP_MODULES := c_bootstrap
+NDK_APP.bionic.APP_MODULES := \
+    c_jemalloc_wrapper        \
+    c_bootstrap               \
+    c_init_static             \
+    c_init_dynamic            \
+    c_tzcode                  \
+    c_dns                     \
+    c_freebsd                 \
+    c_freebsd_large_stack     \
+    c_netbsd                  \
+    c_openbsd_ndk             \
+    c_openbsd_large_stack     \
+
 NDK_APP.bionic.APP_PROJECT_PATH := $(basedir)/apps/bionic/project
 
 $(call __ndk_info,APP              = '$(APP)')

@@ -66,6 +66,7 @@ static __always_inline __u16 __swab16p(const __u16 * p) {
   return __swab16(* p);
 #endif
 }
+#ifndef __APPLE__    // cmjo : fix!!
 static __always_inline __u32 __swab32p(const __u32 * p) {
 #ifdef __arch_swab32p
   return __arch_swab32p(p);
@@ -80,6 +81,7 @@ static __always_inline __u64 __swab64p(const __u64 * p) {
   return __swab64(* p);
 #endif
 }
+#endif /* __APPLE__ */
 static inline __u32 __swahw32p(const __u32 * p) {
 #ifdef __arch_swahw32p
   return __arch_swahw32p(p);
@@ -101,6 +103,7 @@ static inline void __swab16s(__u16 * p) {
   * p = __swab16p(p);
 #endif
 }
+#ifndef __APPLE__    // cmjo : fix!!
 static __always_inline void __swab32s(__u32 * p) {
 #ifdef __arch_swab32s
   __arch_swab32s(p);
@@ -115,6 +118,7 @@ static __always_inline void __swab64s(__u64 * p) {
   * p = __swab64p(p);
 #endif
 }
+#endif /* __APPLE__ */
 static inline void __swahw32s(__u32 * p) {
 #ifdef __arch_swahw32s
   __arch_swahw32s(p);

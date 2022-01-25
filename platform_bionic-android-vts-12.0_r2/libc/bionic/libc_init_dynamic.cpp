@@ -87,7 +87,8 @@ static void __libc_preinit_impl() {
   // update it when it loads or unloads a shared object.
   TlsModules& tls_modules = __libc_shared_globals()->tls_modules;
   tls_modules.generation_libc_so = &__libc_tls_generation_copy;
-  __libc_tls_generation_copy = tls_modules.generation;
+  // cmjo : fix!!
+  atomic_store(&__libc_tls_generation_copy, tls_modules.generation);
 
   __libc_init_globals();
   __libc_init_common();
