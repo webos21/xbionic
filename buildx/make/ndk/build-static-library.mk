@@ -12,17 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-# this file is included repeatedly from Android.mk files in order to clean
-# the module-specific variables from the environment,
-NDK_LOCAL_VARS := \
-  LOCAL_MODULE \
-  LOCAL_SRC_FILES \
-  LOCAL_CFLAGS \
-  LOCAL_LDFLAGS \
-  LOCAL_ARFLAGS \
-  LOCAL_CPP_EXTENSION \
-  LOCAL_STATIC_LIBRARIES \
-  LOCAL_STATIC_WHOLE_LIBRARIES \
-  LOCAL_SHARED_LIBRARIES \
-  LOCAL_MAKEFILE \
-$(call clear-vars, $(NDK_LOCAL_VARS))
+
+# this file is included from Android.mk files to build a target-specific
+# static library
+#
+
+LOCAL_BUILD_SCRIPT := BUILD_STATIC_LIBRARY
+LOCAL_MAKEFILE     := $(local-makefile)
+
+$(call check-defined-LOCAL_MODULE,$(LOCAL_BUILD_SCRIPT))
+$(call check-LOCAL_MODULE,$(LOCAL_MAKEFILE))
+
+$(call handle-module-filename,lib,$(TARGET_LIB_EXTENSION))
+$(call handle-module-built)
+
+LOCAL_MODULE_CLASS := STATIC_LIBRARY
+include $(BUILD_SYSTEM)/build-module.mk
+

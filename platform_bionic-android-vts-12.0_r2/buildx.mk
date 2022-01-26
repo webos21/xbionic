@@ -22,10 +22,10 @@
 basedir = ..
 
 # Include common definitions
-include $(basedir)/buildx/make/lib/definitions.mk
+include $(basedir)/buildx/make/ndk/definitions.mk
 
 # The location of the build system files
-BUILD_SYSTEM := $(basedir)/buildx/make/lib
+BUILD_SYSTEM := $(basedir)/buildx/make/ndk
 # Where all generated files will be stored during a build
 NDK_OUT := $(basedir)/out
 # Where all app-specific generated files will be stored
@@ -63,6 +63,9 @@ NDK_APP.bionic.APP_MODULES := \
     c_netbsd                  \
     c_openbsd_ndk             \
     c_openbsd_large_stack     \
+    c_openbsd                 \
+    c_gdtoa                   \
+    c_fortify                 \
 
 NDK_APP.bionic.APP_PROJECT_PATH := $(basedir)/apps/bionic/project
 

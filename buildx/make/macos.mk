@@ -25,12 +25,6 @@
 ######################################################
 
 ########################
-# Programs
-########################
-#include $(basedir)/buildx/make/cmd.mk
-
-
-########################
 # Host Configuration
 ########################
 HOST_OS       := darwin
@@ -45,21 +39,25 @@ HOST_LD       := ld
 HOST_LDFLAGS  := 
 HOST_AR       := ar
 HOST_ARFLAGS  := 
+HOST_EXEEXT   :=
+HOST_ECHO     := echo
+HOST_ECHO_N   := printf %s
+
 
 ########################
 # Toolchain Configuration
 ########################
-TOOLCHAIN_ABIS   := arm64
+TOOLCHAIN_ARCH   := arm64
+TOOLCHAIN_ABIS   := arm64-v8a
 TOOLCHAIN_NAME   := macos
 TOOLCHAIN_PREFIX := 
 
 ########################
 # Build-Options Configuration
 ########################
-TARGET_TOOLCHAIN := arm-eabi-4.2.1
-TARGET_PLATFORM  := macos
-TARGET_ARCH_ABI  := arm64
-TARGET_ARCH      := arm64
+TARGET_TOOLCHAIN      := aarch64-linux-android-clang
+TARGET_ARCH_ABI       := arm64-v8a
+TARGET_ARCH           := arm64
 
 TARGET_ABI := $(TARGET_PLATFORM)-$(TARGET_ARCH_ABI)
 # setup sysroot-related variables. The SYSROOT point to a directory

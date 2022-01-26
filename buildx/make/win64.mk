@@ -45,6 +45,10 @@ HOST_LD       := ld
 HOST_LDFLAGS  := -mno-cygwin
 HOST_AR       := ar
 HOST_ARFLAGS  := 
+HOST_EXEEXT   := .exe
+HOST_ECHO     := echo
+HOST_ECHO_N   := echo -n
+
 
 ########################
 # Toolchain Configuration

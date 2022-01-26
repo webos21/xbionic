@@ -484,15 +484,131 @@ include $(CLEAR_VARS)
 
 LOCAL_MODULE    := libc_openbsd_large_stack
 LOCAL_CFLAGS    := $(libc_defaults)      \
+    -D_GNU_SOURCE -D__ANDROID_API__=26   \
     -include openbsd-compat.h            \
     -Wno-sign-compare                    \
     -Wframe-larger-than=5000             \
     -I$(LOCAL_PATH)/private              \
-    -I$(LOCAL_PATH)/upstream-openbsd/android/include/   \
-    -I$(LOCAL_PATH)/upstream-openbsd/lib/libc/include/  \
-    -I$(LOCAL_PATH)/upstream-openbsd/lib/libc/gdtoa/    \
-    -I$(LOCAL_PATH)/upstream-openbsd/lib/libc/stdio/
+    -I$(LOCAL_PATH)/upstream-openbsd/android/include   \
+    -I$(LOCAL_PATH)/upstream-openbsd/lib/libc/include  \
+    -I$(LOCAL_PATH)/upstream-openbsd/lib/libc/gdtoa    \
+    -I$(LOCAL_PATH)/upstream-openbsd/lib/libc/stdio
 LOCAL_SRC_FILES := $(libc_openbsd_large_stack_src_files)
 
 include $(BUILD_STATIC_LIBRARY)
 
+
+#-----------------------------------------------------------------------
+# libc_openbsd.a - upstream OpenBSD C library code
+#-----------------------------------------------------------------------
+
+libc_openbsd_src_files = \
+    upstream-openbsd/lib/libc/crypt/arc4random.c          \
+    upstream-openbsd/lib/libc/crypt/arc4random_uniform.c  \
+    upstream-openbsd/lib/libc/string/stpncpy.c            \
+    upstream-openbsd/lib/libc/string/strcat.c             \
+    upstream-openbsd/lib/libc/string/strlcat.c            \
+    upstream-openbsd/lib/libc/string/strlcpy.c            \
+    upstream-openbsd/lib/libc/string/strncat.c            \
+    upstream-openbsd/lib/libc/string/strncpy.c
+
+ifneq ($(TARGET_ARCH),arm64)
+libc_openbsd_src_files += \
+    upstream-openbsd/lib/libc/string/memchr.c             \
+    upstream-openbsd/lib/libc/string/memrchr.c            \
+    upstream-openbsd/lib/libc/string/stpcpy.c             \
+    upstream-openbsd/lib/libc/string/strcpy.c             \
+    upstream-openbsd/lib/libc/string/strncmp.c
+endif
+ifneq ($(TARGET_ARCH),x86_64)
+libc_openbsd_src_files += \
+    upstream-openbsd/lib/libc/string/stpcpy.c             \
+    upstream-openbsd/lib/libc/string/stpncpy.c            \
+    upstream-openbsd/lib/libc/string/strcat.c             \
+    upstream-openbsd/lib/libc/string/strcpy.c             \
+    upstream-openbsd/lib/libc/string/strncat.c            \
+    upstream-openbsd/lib/libc/string/strncmp.c            \
+    upstream-openbsd/lib/libc/string/strncpy.c
+endif
+
+include $(CLEAR_VARS)
+
+LOCAL_MODULE    := libc_openbsd
+LOCAL_CFLAGS    := $(libc_defaults)      \
+    -D_GNU_SOURCE -D__ANDROID_API__=26   \
+    -Wno-sign-compare                    \
+    -Wno-unused-parameter                \
+    -include openbsd-compat.h            \
+    -I$(LOCAL_PATH)/private              \
+    -I$(LOCAL_PATH)/upstream-openbsd/android/include
+LOCAL_SRC_FILES := $(libc_openbsd_src_files)
+
+include $(BUILD_STATIC_LIBRARY)
+
+
+#-----------------------------------------------------------------------
+# libc_gdtoa.a - upstream OpenBSD C library gdtoa code
+#-----------------------------------------------------------------------
+
+libc_gdtoa_src_files = \
+    upstream-openbsd/android/gdtoa_support.cpp \
+    upstream-openbsd/lib/libc/gdtoa/dmisc.c    \
+    upstream-openbsd/lib/libc/gdtoa/dtoa.c     \
+    upstream-openbsd/lib/libc/gdtoa/gdtoa.c    \
+    upstream-openbsd/lib/libc/gdtoa/gethex.c   \
+    upstream-openbsd/lib/libc/gdtoa/gmisc.c    \
+    upstream-openbsd/lib/libc/gdtoa/hd_init.c  \
+    upstream-openbsd/lib/libc/gdtoa/hdtoa.c    \
+    upstream-openbsd/lib/libc/gdtoa/hexnan.c   \
+    upstream-openbsd/lib/libc/gdtoa/ldtoa.c    \
+    upstream-openbsd/lib/libc/gdtoa/misc.c     \
+    upstream-openbsd/lib/libc/gdtoa/smisc.c    \
+    upstream-openbsd/lib/libc/gdtoa/strtod.c   \
+    upstream-openbsd/lib/libc/gdtoa/strtodg.c  \
+    upstream-openbsd/lib/libc/gdtoa/strtof.c   \
+    upstream-openbsd/lib/libc/gdtoa/strtord.c  \
+    upstream-openbsd/lib/libc/gdtoa/sum.c      \
+    upstream-openbsd/lib/libc/gdtoa/ulp.c
+
+include $(CLEAR_VARS)
+
+LOCAL_MODULE    := libc_gdtoa
+LOCAL_CFLAGS    := $(libc_defaults)      \
+    -Wno-sign-compare                    \
+    -include openbsd-compat.h            \
+    -I$(LOCAL_PATH)/private              \
+    -I$(LOCAL_PATH)/upstream-openbsd/android/include \
+    -I$(LOCAL_PATH)/upstream-openbsd/lib/libc/include
+
+LOCAL_SRC_FILES := $(libc_gdtoa_src_files)
+
+include $(BUILD_STATIC_LIBRARY)
+
+
+#-----------------------------------------------------------------------
+# libc_fortify.a - container for our FORITFY
+#-----------------------------------------------------------------------
+
+libc_fortify_src_files = \
+    bionic/fortify.cpp
+ifeq ($(TARGET_ARCH),arm64)
+libc_fortify_src_files += \
+    arch-arm64/generic/bionic/__memcpy_chk.S
+endif
+
+libc_fortify_cflags = \
+    -U_FORTIFY_SOURCE                   \
+    -D__BIONIC_DECLARE_FORTIFY_HELPERS
+ifeq ($(TARGET_ARCH),arm64)
+libc_fortify_cflags += \
+    -DNO___MEMCPY_CHK
+endif
+
+include $(CLEAR_VARS)
+
+LOCAL_MODULE    := libc_fortify
+LOCAL_CFLAGS    := $(libc_defaults)      \
+    $(libc_fortify_cflags)
+LOCAL_SRC_FILES := $(libc_fortify_src_files)
+
+include $(BUILD_STATIC_LIBRARY)

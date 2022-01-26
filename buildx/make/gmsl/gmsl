@@ -38,35 +38,52 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 # ----------------------------------------------------------------------------
+
 # Determine if the library has already been included and if so don't
 # bother including it again
+
 ifndef __gmsl_included
+
 # Standard definitions for true and false.  true is any non-empty
 # string, false is an empty string. These are intended for use with
 # $(if).
+
 true  := T
 false :=
+
 # ----------------------------------------------------------------------------
 # Function:  not
 # Arguments: 1: A boolean value
 # Returns:   Returns the opposite of the arg. (true -> false, false -> true)
 # ----------------------------------------------------------------------------
 not = $(if $1,$(false),$(true))
+
 # Prevent reinclusion of the library
+
 __gmsl_included := $(true)
+
 # Try to determine where this file is located.  If the caller did
 # include /foo/gmsl then extract the /foo/ so that __gmsl gets
 # included transparently
+
 ifneq ($(MAKEFILE_LIST),)
 __gmsl_root := $(word $(words $(MAKEFILE_LIST)),$(MAKEFILE_LIST))
+
 # If there are any spaces in the path in __gmsl_root then give up
+
 ifeq (1,$(words $(__gmsl_root)))
 __gmsl_root := $(patsubst %gmsl,%,$(__gmsl_root))
 else
 __gmsl_root :=
 endif
+
 include $(__gmsl_root)__gmsl
+
 else
+
 include __gmsl
+
 endif
+
 endif # __gmsl_included
+

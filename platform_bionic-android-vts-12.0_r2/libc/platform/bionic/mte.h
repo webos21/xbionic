@@ -38,7 +38,7 @@
 #define PR_MTE_TAG_SET_NONZERO (0xfffeUL << PR_MTE_TAG_SHIFT)
 
 inline bool mte_supported() {
-#if defined(__aarch64__)
+#if defined(__aarch64__) && !defined(__APPLE__)
   static bool supported = getauxval(AT_HWCAP2) & HWCAP2_MTE;
 #else
   static bool supported = false;

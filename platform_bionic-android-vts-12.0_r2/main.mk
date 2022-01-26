@@ -263,21 +263,35 @@ $(call ndk_log,$(space) NDK_HOST_OUT     = '$(NDK_HOST_OUT)')
 
 NDK_APP_VARS := APP_MODULES APP_PROJECT_PATH
 NDK_APPLICATION_MK := $(BUILD_SYSTEM)/default-application.mk
-NDK_APP_BUILD_SCRIPT := buildx.mk
+NDK_APP_BUILD_SCRIPT := ./*/buildx.mk
 
-APP := malloc
+APP := bionic
 APP_PLATFORM_LEVEL := 21
 
 NDK_APPS := $(APP)
 NDK_APP_ABI := all64
 #NDK_APP_STL := c++_static
 
-NDK_APP_MODULES := jemalloc jemalloc_jet jemalloc_unittest
+NDK_APP_MODULES :=            \
+    c_jemalloc_wrapper        \
+    c_bootstrap               \
+    c_init_static             \
+    c_init_dynamic            \
+    c_tzcode                  \
+    c_dns                     \
+    c_freebsd                 \
+    c_freebsd_large_stack     \
+    c_netbsd                  \
+    c_openbsd_ndk             \
+    c_openbsd_large_stack     \
+    c_openbsd                 \
+    c_gdtoa                   \
+    c_fortify                 \
 
-NDK_ALL_APPS := malloc
-$(call set,NDK_APP.malloc,Application.mk,$(basedir)/apps/malloc/Application.mk)
-$(call set,NDK_APP.malloc,APP_MODULES,$(NDK_APP_MODULES))
-$(call set,NDK_APP.malloc,APP_PROJECT_PATH,$(basedir)/apps/malloc/project)
+NDK_ALL_APPS := $(APP)
+$(call set,NDK_APP.bionic,Application.mk,$(basedir)/apps/bionic/Application.mk)
+$(call set,NDK_APP.bionic,APP_MODULES,$(NDK_APP_MODULES))
+$(call set,NDK_APP.bionic,APP_PROJECT_PATH,$(basedir)/apps/bionic/project)
 
 $(call ndk_log,App Settings)
 $(call ndk_log,$(space) APP              = '$(APP)')
@@ -285,9 +299,9 @@ $(call ndk_log,$(space) NDK_APPS         = '$(NDK_APPS)')
 $(call ndk_log,$(space) NDK_APP_ABI      = '$(NDK_APP_ABI)')
 $(call ndk_log,$(space) NDK_ALL_APPS     = '$(NDK_ALL_APPS)')
 $(call ndk_log,$(space) NDK_APP_VARS     = '$(NDK_APP_VARS)')
-$(call ndk_log,$(space) NDK_APP.malloc.Application.mk   = '$(call get,NDK_APP.malloc,Application.mk)')
-$(call ndk_log,$(space) NDK_APP.malloc.APP_MODULES      = '$(call get,NDK_APP.malloc,APP_MODULES)')
-$(call ndk_log,$(space) NDK_APP.malloc.APP_PROJECT_PATH = '$(call get,NDK_APP.malloc,APP_PROJECT_PATH)')
+$(call ndk_log,$(space) NDK_APP.bionic.Application.mk   = '$(call get,NDK_APP.bionic,Application.mk)')
+$(call ndk_log,$(space) NDK_APP.bionic.APP_MODULES      = '$(call get,NDK_APP.bionic,APP_MODULES)')
+$(call ndk_log,$(space) NDK_APP.bionic.APP_PROJECT_PATH = '$(call get,NDK_APP.bionic,APP_PROJECT_PATH)')
 
 $(call __ndk_info,Building for application '$(NDK_APPS)')
 

@@ -26,6 +26,8 @@
 
 LOCAL_PATH := $(call my-dir)
 
+$(call __ndk_info,buildx.mk is included!!!)
+
 common_cflags = \
     -D_REENTRANT           \
     -O3                    \
