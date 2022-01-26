@@ -46,8 +46,8 @@ all: usage
 
 linux:
 	@$(MKDIR) -p "$(destdir)/$@"
-	$(MAKE) -C $(xbionic_src) -f buildx.mk TARGET=$@
 	$(MAKE) -C $(jemalloc_src) -f main.mk TARGET=$@
+	$(MAKE) -C $(xbionic_src) -f main.mk TARGET=$@
 
 macos:
 	@$(MKDIR) -p "$(destdir)/$@"
@@ -56,8 +56,8 @@ macos:
 
 win64:
 	@$(MKDIR) -p "$(destdir)/$@"
-	$(MAKE) -C $(xbionic_src) -f buildx.mk TARGET=$@
 	$(MAKE) -C $(jemalloc_src) -f main.mk TARGET=$@
+	$(MAKE) -C $(xbionic_src) -f main.mk TARGET=$@
 
 clean:
 	@$(RM) -rf $(basedir)/out/*
