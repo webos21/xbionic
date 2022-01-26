@@ -150,7 +150,7 @@ endif
 
 # cmjo : edit
 #TARGET_ASM      = $(TOOLCHAIN_ROOT)/bin/yasm
-TARGET_ASM      = yasm
+TARGET_ASM      = as
 TARGET_ASMFLAGS =
 
 # cmjo : edit
