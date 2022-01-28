@@ -350,9 +350,633 @@ ANDROID_MK_INCLUDED := \
 all: installed_modules host_libraries host_executables clang_tidy_rules
 
 
-$(foreach _app,$(NDK_APPS),\
-  $(eval include $(BUILD_SYSTEM)/setup-app.mk)\
+# ====================================================================
+# setup-app.mk : BEGIN
+# ====================================================================
+
+_app = $(APP)
+
+$(call assert-defined,_app)
+
+_map := NDK_APP.$(_app)
+
+# ok, let's parse all Android.mk source files in order to build
+# the modules for this app.
+#
+
+# Restore the APP_XXX variables just for this pass as NDK_APP_XXX
+#
+NDK_APP_NAME           := $(_app)
+NDK_APP_APPLICATION_MK := $(call get,$(_map),Application.mk)
+
+$(foreach __name,$(NDK_APP_VARS),\
+  $(eval NDK_$(__name) := $(call get,$(_map),$(__name)))\
 )
+
+# make the application depend on the modules it requires
+.PHONY: ndk-app-$(_app)
+ndk-app-$(_app): $(NDK_APP_MODULES)
+all: ndk-app-$(_app)
+
+# The ABI(s) to use
+NDK_APP_ABI := $(subst $(comma),$(space),$(strip $(NDK_APP_ABI)))
+ifndef NDK_APP_ABI
+    NDK_APP_ABI := $(NDK_DEFAULT_ABIS)
+endif
+
+NDK_ABI_FILTER := $(strip $(NDK_ABI_FILTER))
+ifdef NDK_ABI_FILTER
+    $(eval $(NDK_ABI_FILTER))
+endif
+
+# If APP_ABI is 'all', then set it to all supported ABIs
+# Otherwise, check that we don't have an invalid value here.
+#
+ifeq ($(NDK_APP_ABI),all)
+    NDK_APP_ABI := $(NDK_APP_ABI_ALL_EXPANDED)
+else ifeq ($(NDK_APP_ABI),all32)
+    NDK_APP_ABI := $(NDK_APP_ABI_ALL32_EXPANDED)
+else ifeq ($(NDK_APP_ABI),all64)
+    NDK_APP_ABI := $(NDK_APP_ABI_ALL64_EXPANDED)
+else
+    # check the target ABIs for this application
+    _bad_abis = $(strip $(filter-out $(NDK_ALL_ABIS),$(NDK_APP_ABI)))
+    ifneq ($(_bad_abis),)
+        ifneq ($(filter $(_bad_abis),armeabi-v7a-hard),)
+            $(call __ndk_info,armeabi-v7a-hard is no longer supported. Use armeabi-v7a.)
+            $(call __ndk_info,See https://android.googlesource.com/platform/ndk/+/master/docs/HardFloatAbi.md)
+        else ifneq ($(filter $(_bad_abis),armeabi),)
+            $(call __ndk_info,The armeabi ABI is no longer supported. Use armeabi-v7a.)
+        else ifneq ($(filter $(_bad_abis),mips mips64),)
+            $(call __ndk_info,MIPS and MIPS64 are no longer supported.)
+        endif
+        $(call __ndk_info,NDK Application '$(_app)' targets unknown ABI(s): $(_bad_abis))
+        $(call __ndk_info,Please fix the APP_ABI definition in $(NDK_APP_APPLICATION_MK))
+        $(call __ndk_error,Aborting)
+    endif
+endif
+
+_deprecated_abis := $(filter $(NDK_DEPRECATED_ABIS),$(NDK_APP_ABI))
+ifneq ($(_deprecated_abis),)
+    $(call __ndk_warning,Application targets deprecated ABI(s): $(_deprecated_abis))
+    $(call __ndk_warning,Support for these ABIs will be removed in a future NDK release.)
+endif
+
+# Clear all installed binaries for this application. This ensures that if the
+# build fails or if you remove a module, you're not going to mistakenly package
+# an obsolete version.
+#
+# Historically this would clear every ABI, meaning that the following workflow
+# would leave only x86_64 present in the lib dir on completion:
+#
+#     for abi in armeabi-v7a arm64-v8a x86 x86_64; do
+#         ndk-build APP_ABI=$abi
+#     done
+#
+# This is the workflow used by gradle. They currently override NDK_ALL_ABIS (an
+# internal variable) to workaround this behavior. Changing this behavior allows
+# them to remove their workaround and stop clobbering our implementation
+# details.
+ifeq ($(NDK_APP.$(_app).cleaned_binaries),)
+    NDK_APP.$(_app).cleaned_binaries := true
+
+clean-installed-binaries::
+	$(hide) $(call host-rm,$(NDK_APP_ABI:%=$(NDK_APP_LIBS_OUT)/%/*))
+	$(hide) $(call host-rm,$(NDK_APP_ABI:%=$(NDK_APP_LIBS_OUT)/%/gdbserver))
+	$(hide) $(call host-rm,$(NDK_APP_ABI:%=$(NDK_APP_LIBS_OUT)/%/gdb.setup))
+endif
+
+# Renderscript
+
+RENDERSCRIPT_TOOLCHAIN_PREBUILT_ROOT := \
+    $(NDK_ROOT)/toolchains/renderscript/prebuilt/$(HOST_TAG64)
+RENDERSCRIPT_TOOLCHAIN_PREFIX := $(RENDERSCRIPT_TOOLCHAIN_PREBUILT_ROOT)/bin/
+RENDERSCRIPT_TOOLCHAIN_HEADER := $(RENDERSCRIPT_TOOLCHAIN_PREBUILT_ROOT)/clang-include
+RENDERSCRIPT_PLATFORM_HEADER := $(RENDERSCRIPT_TOOLCHAIN_PREBUILT_ROOT)/platform/rs
+
+COMPILE_COMMANDS_JSON := $(call host-path,compile_commands.json)
+sub_commands_json :=
+
+
+# ====================================================================
+# setup-abi.mk : BEGIN
+# ====================================================================
+
+TARGET_ARCH_ABI := arm64-v8a
+
+$(call ndk_log,Building application '$(NDK_APP_NAME)' for ABI '$(TARGET_ARCH_ABI)')
+
+TARGET_ARCH := $(strip $(NDK_ABI.$(TARGET_ARCH_ABI).arch))
+ifndef TARGET_ARCH
+    $(call __ndk_info,ERROR: The $(TARGET_ARCH_ABI) ABI has no associated architecture!)
+    $(call __ndk_error,Aborting...)
+endif
+
+TARGET_OUT := $(NDK_APP_OUT)/$(_app)/$(TARGET_ARCH_ABI)
+
+TARGET_PLATFORM_LEVEL := $(APP_PLATFORM_LEVEL)
+
+# 64-bit ABIs were first supported in API 21. Pull up these ABIs if the app has
+# a lower minSdkVersion.
+ifneq ($(filter $(NDK_KNOWN_DEVICE_ABI64S),$(TARGET_ARCH_ABI)),)
+    ifneq ($(call lt,$(TARGET_PLATFORM_LEVEL),21),)
+        TARGET_PLATFORM_LEVEL := 21
+    endif
+endif
+
+# Not used by ndk-build, but are documented for use by Android.mk files.
+TARGET_PLATFORM := android-$(TARGET_PLATFORM_LEVEL)
+TARGET_ABI := $(TARGET_PLATFORM)-$(TARGET_ARCH_ABI)
+
+# If we're targeting a new enough platform version, we don't actually need to
+# cover any gaps in libc for libc++ support. In those cases, save size in the
+# APK by avoiding libandroid_support.
+#
+# This is also a requirement for static executables, since using
+# libandroid_support with a modern libc.a will result in multiple symbol
+# definition errors.
+NDK_PLATFORM_NEEDS_ANDROID_SUPPORT := true
+ifeq ($(call gte,$(TARGET_PLATFORM_LEVEL),21),$(true))
+    NDK_PLATFORM_NEEDS_ANDROID_SUPPORT := false
+endif
+
+# Separate the debug and release objects. This prevents rebuilding
+# everything when you switch between these two modes. For projects
+# with lots of C++ sources, this can be a considerable time saver.
+ifeq ($(NDK_APP_OPTIM),debug)
+TARGET_OBJS := $(TARGET_OUT)/objs-debug
+else
+TARGET_OBJS := $(TARGET_OUT)/objs
+endif
+
+TARGET_GDB_SETUP := $(TARGET_OUT)/setup.gdb
+
+# RS triple
+ifeq ($(TARGET_ARCH_ABI),armeabi-v7a)
+  RS_TRIPLE := armv7-none-linux-gnueabi
+endif
+ifeq ($(TARGET_ARCH_ABI),armeabi)
+  RS_TRIPLE := arm-none-linux-gnueabi
+endif
+ifeq ($(TARGET_ARCH_ABI),arm64-v8a)
+  RS_TRIPLE := aarch64-linux-android
+endif
+ifeq ($(TARGET_ARCH_ABI),mips)
+  RS_TRIPLE := mipsel-unknown-linux
+endif
+ifeq ($(TARGET_ARCH_ABI),x86)
+  RS_TRIPLE := i686-unknown-linux
+endif
+ifeq ($(TARGET_ARCH_ABI),x86_64)
+  RS_TRIPLE := x86_64-unknown-linux
+endif
+
+# ====================================================================
+# setup-toolchain.mk : END
+# ====================================================================
+
+
+$(call assert-defined,TARGET_PLATFORM_LEVEL TARGET_ARCH TARGET_ARCH_ABI)
+#$(call assert-defined,NDK_APPS NDK_APP_STL)
+
+# Check that we have a toolchain that supports the current ABI.
+# NOTE: If NDK_TOOLCHAIN is defined, we're going to use it.
+ifndef NDK_TOOLCHAIN
+    # TODO: Remove all the multiple-toolchain configuration stuff. We only have
+    # Clang.
+
+    # This is a sorted list of toolchains that support the given ABI. For older
+    # NDKs this was a bit more complicated, but now we just have the GCC and the
+    # Clang toolchains with GCC being first (named "*-4.9", whereas clang is
+    # "*-clang").
+    TARGET_TOOLCHAIN_LIST := \
+        $(strip $(sort $(NDK_ABI.$(TARGET_ARCH_ABI).toolchains)))
+
+    ifneq ($(words $(TARGET_TOOLCHAIN_LIST)),1)
+        $(call __ndk_error,Expected two items in TARGET_TOOLCHAIN_LIST, \
+            found "$(TARGET_TOOLCHAIN_LIST)")
+    endif
+
+    ifndef TARGET_TOOLCHAIN_LIST
+        $(call __ndk_info,There is no toolchain that supports the $(TARGET_ARCH_ABI) ABI.)
+        $(call __ndk_info,Please modify the APP_ABI definition in $(NDK_APP_APPLICATION_MK) to use)
+        $(call __ndk_info,a set of the following values: $(NDK_ALL_ABIS))
+        $(call __ndk_error,Aborting)
+    endif
+
+    # We default to using Clang, which is the last item in the list.
+    TARGET_TOOLCHAIN := $(lastword $(TARGET_TOOLCHAIN_LIST))
+
+    $(call ndk_log,Using target toolchain '$(TARGET_TOOLCHAIN)' for '$(TARGET_ARCH_ABI)' ABI)
+else # NDK_TOOLCHAIN is not empty
+    TARGET_TOOLCHAIN_LIST := $(strip $(filter $(NDK_TOOLCHAIN),$(NDK_ABI.$(TARGET_ARCH_ABI).toolchains)))
+    ifndef TARGET_TOOLCHAIN_LIST
+        $(call __ndk_info,The selected toolchain ($(NDK_TOOLCHAIN)) does not support the $(TARGET_ARCH_ABI) ABI.)
+        $(call __ndk_info,Please modify the APP_ABI definition in $(NDK_APP_APPLICATION_MK) to use)
+        $(call __ndk_info,a set of the following values: $(NDK_TOOLCHAIN.$(NDK_TOOLCHAIN).abis))
+        $(call __ndk_info,Or change your NDK_TOOLCHAIN definition.)
+        $(call __ndk_error,Aborting)
+    endif
+    TARGET_TOOLCHAIN := $(NDK_TOOLCHAIN)
+endif # NDK_TOOLCHAIN is not empty
+
+TARGET_PREBUILT_SHARED_LIBRARIES :=
+
+# Define default values for TOOLCHAIN_NAME, this can be overriden in
+# the setup file.
+TOOLCHAIN_NAME   := $(TARGET_TOOLCHAIN)
+TOOLCHAIN_VERSION := $(call last,$(subst -,$(space),$(TARGET_TOOLCHAIN)))
+
+# We expect the gdbserver binary for this toolchain to be located at its root.
+TARGET_GDBSERVER := $(NDK_ROOT)/prebuilt/android-$(TARGET_ARCH)/gdbserver/gdbserver
+
+# compute NDK_APP_DST_DIR as the destination directory for the generated files
+NDK_APP_DST_DIR := $(NDK_APP_LIBS_OUT)/$(TARGET_ARCH_ABI)
+
+
+# ====================================================================
+# default-build-commands.mk : BEGIN
+# ====================================================================
+
+# These flags are used to ensure that a binary doesn't reference undefined
+# flags.
+TARGET_NO_UNDEFINED_LDFLAGS := -Wl,--no-undefined
+
+
+# Return the list of object, static libraries and shared libraries as they
+# must appear on the final static linker command (order is important).
+#
+# This can be over-ridden by a specific toolchain. Note that by default
+# we always put libgcc _after_ all static libraries and _before_ shared
+# libraries. This ensures that any libgcc function used by the final
+# executable will be copied into it. Otherwise, it could contain
+# symbol references to the same symbols as exported by shared libraries
+# and this causes binary compatibility problems when they come from
+# system libraries (e.g. libc.so and others).
+#
+# IMPORTANT: The result must use the host path convention.
+#
+# $1: object files
+# $2: static libraries
+# $3: whole static libraries
+# $4: shared libraries
+#
+TARGET-get-linker-objects-and-libraries = \
+    $(call host-path, $1) \
+    $(call link-whole-archives,$3) \
+    $(call host-path, $2) \
+    $(PRIVATE_LIBATOMIC) \
+    $(call host-path, $4) \
+
+# This flag are used to provide compiler protection against format
+# string vulnerabilities.
+TARGET_FORMAT_STRING_CFLAGS := -Wformat -Werror=format-security
+
+# This flag disables the above security checks
+TARGET_DISABLE_FORMAT_STRING_CFLAGS := -Wno-error=format-security
+
+define cmd-build-shared-library
+$(PRIVATE_CXX) \
+    -Wl,-soname,$(notdir $(LOCAL_BUILT_MODULE)) \
+    -shared \
+    $(PRIVATE_LINKER_OBJECTS_AND_LIBRARIES) \
+    $(GLOBAL_LDFLAGS) \
+    $(PRIVATE_LDFLAGS) \
+    $(PRIVATE_LDLIBS) \
+    -o $(call host-path,$(LOCAL_BUILT_MODULE))
+endef
+
+# The following -rpath-link= are needed for ld.bfd (default for ARM64) when
+# linking executables to supress warning about missing symbol from libraries not
+# directly needed. ld.gold (default for all other architectures) doesn't emulate
+# this buggy behavior.
+define cmd-build-executable
+$(PRIVATE_CXX) \
+    -Wl,--gc-sections \
+    -Wl,-rpath-link=$(call host-path,$(PRIVATE_SYSROOT_API_LIB_DIR)) \
+    -Wl,-rpath-link=$(call host-path,$(TARGET_OUT)) \
+    $(PRIVATE_LINKER_OBJECTS_AND_LIBRARIES) \
+    $(GLOBAL_LDFLAGS) \
+    $(PRIVATE_LDFLAGS) \
+    $(PRIVATE_LDLIBS) \
+    -o $(call host-path,$(LOCAL_BUILT_MODULE))
+endef
+
+define cmd-build-static-library
+$(PRIVATE_AR) $(call host-path,$(LOCAL_BUILT_MODULE)) $(PRIVATE_AR_OBJECTS)
+endef
+
+cmd-strip = $(PRIVATE_STRIP) $(PRIVATE_STRIP_MODE) $(call host-path,$1)
+
+# arm32 currently uses a linker script in place of libgcc to ensure that
+# libunwind is linked in the correct order. --exclude-libs does not propagate to
+# the contents of the linker script and can't be specified within the linker
+# script. Hide both regardless of architecture to future-proof us in case we
+# move other architectures to a linker script (which we may want to do so we
+# automatically link libclangrt on other architectures).
+TARGET_LIBATOMIC = -latomic
+TARGET_LDLIBS := -lc -lm
+
+TOOLCHAIN_ROOT := $(NDK_ROOT)/toolchains/llvm/prebuilt/$(HOST_TAG64)
+LLVM_TOOLCHAIN_PREFIX := $(TOOLCHAIN_ROOT)/bin/
+
+
+# IMPORTANT: The following definitions must use lazy assignment because
+# the value of TOOLCHAIN_NAME or TARGET_CFLAGS can be changed later by
+# the toolchain's setup.mk script.
+TOOLCHAIN_PREFIX = $(TOOLCHAIN_ROOT)/bin/$(TOOLCHAIN_NAME)-
+
+# cmjo : edit
+#TARGET_CC = $(LLVM_TOOLCHAIN_PREFIX)clang$(HOST_EXEEXT)
+#TARGET_CXX = $(LLVM_TOOLCHAIN_PREFIX)clang++$(HOST_EXEEXT)
+TARGET_CC = gcc$(HOST_EXEEXT)
+TARGET_CXX = g++$(HOST_EXEEXT)
+
+# cmjo : edit
+#CLANG_TIDY = $(LLVM_TOOLCHAIN_PREFIX)clang-tidy$(HOST_EXEEXT)
+CLANG_TIDY = clang-tidy$(HOST_EXEEXT)
+
+# cmjo : remove from GLOBAL_CFLAGS
+#    -target $(LLVM_TRIPLE)$(TARGET_PLATFORM_LEVEL) \
+
+GLOBAL_CFLAGS = \
+    -fdata-sections \
+    -ffunction-sections \
+    -fstack-protector-strong \
+    -funwind-tables \
+    -no-canonical-prefixes \
+
+# This is unnecessary given the new toolchain layout, but Studio will not
+# recognize this as an Android build if there is no --sysroot flag.
+# TODO: Teach Studio to recognize Android builds based on --target.
+
+# cmjo : commenting
+#GLOBAL_CFLAGS += --sysroot $(call host-path,$(NDK_UNIFIED_SYSROOT_PATH))
+
+# Always enable debug info. We strip binaries when needed.
+GLOBAL_CFLAGS += -g
+
+# TODO: Remove.
+GLOBAL_CFLAGS += \
+    -Wno-invalid-command-line-argument \
+    -Wno-unused-command-line-argument \
+
+GLOBAL_CFLAGS += -D_FORTIFY_SOURCE=2
+
+GLOBAL_LDFLAGS = \
+    -target $(LLVM_TRIPLE)$(TARGET_PLATFORM_LEVEL) \
+    -no-canonical-prefixes \
+
+GLOBAL_CXXFLAGS = $(GLOBAL_CFLAGS) -std=gnu++17 -fno-exceptions -fno-rtti
+
+TARGET_CFLAGS =
+TARGET_CONLYFLAGS =
+TARGET_CXXFLAGS = $(TARGET_CFLAGS)
+
+TARGET_RS_CC    = $(RENDERSCRIPT_TOOLCHAIN_PREFIX)llvm-rs-cc
+TARGET_RS_BCC   = $(RENDERSCRIPT_TOOLCHAIN_PREFIX)bcc_compat
+TARGET_RS_FLAGS = -Wall -Werror
+ifeq (,$(findstring 64,$(TARGET_ARCH_ABI)))
+TARGET_RS_FLAGS += -m32
+else
+TARGET_RS_FLAGS += -m64
+endif
+
+# cmjo : edit
+#TARGET_ASM      = $(TOOLCHAIN_ROOT)/bin/yasm
+TARGET_ASM      = as
+TARGET_ASMFLAGS =
+
+# cmjo : edit
+#TARGET_LD       = $(TOOLCHAIN_ROOT)/bin/ld
+TARGET_LD       = ld
+TARGET_LDFLAGS :=
+
+# cmjo : edit
+#TARGET_AR = $(LLVM_TOOLCHAIN_PREFIX)llvm-ar$(HOST_EXEEXT)
+TARGET_AR = ar$(HOST_EXEEXT)
+TARGET_ARFLAGS := crs
+
+# cmjo : edit
+#TARGET_STRIP = $(LLVM_TOOLCHAIN_PREFIX)llvm-strip$(HOST_EXEEXT)
+TARGET_STRIP = strip$(HOST_EXEEXT)
+
+TARGET_OBJ_EXTENSION := .o
+TARGET_LIB_EXTENSION := .a
+TARGET_SONAME_EXTENSION := .so
+
+# ====================================================================
+# default-build-commands.mk : END
+# ====================================================================
+
+
+# ====================================================================
+# now call the toolchain-specific setup script : BEGIN
+# ====================================================================
+
+TOOLCHAIN_NAME := aarch64-linux-android
+LLVM_TRIPLE := aarch64-none-linux-android
+
+TARGET_TOOLCHAIN_ARCH_LIB_DIR := aarch64
+TARGET_ASAN_BASENAME := libclang_rt.asan-aarch64-android.so
+TARGET_UBSAN_BASENAME := libclang_rt.ubsan_standalone-aarch64-android.so
+
+TARGET_CFLAGS := -fpic
+
+TARGET_arm64_release_CFLAGS := \
+    -O2 \
+    -DNDEBUG \
+
+TARGET_arm64_debug_CFLAGS := \
+    -O0 \
+    -UNDEBUG \
+    -fno-limit-debug-info \
+
+# This function will be called to determine the target CFLAGS used to build
+# a C or Assembler source file, based on its tags.
+#
+TARGET-process-src-files-tags = \
+$(eval __debug_sources := $(call get-src-files-with-tag,debug)) \
+$(eval __release_sources := $(call get-src-files-without-tag,debug)) \
+$(call set-src-files-target-cflags, $(__debug_sources), $(TARGET_arm64_debug_CFLAGS)) \
+$(call set-src-files-target-cflags, $(__release_sources),$(TARGET_arm64_release_CFLAGS)) \
+
+# ====================================================================
+# now call the toolchain-specific setup script : END
+# ====================================================================
+
+# Setup sysroot variables.
+#
+# Note that these are not needed for the typical case of invoking Clang, as
+# Clang already knows where the sysroot is relative to itself. We still need to
+# manually refer to these in some places because other tools such as yasm and
+# the renderscript compiler don't have this knowledge.
+
+# SYSROOT_INC points to a directory that contains all public header files for a
+# given platform.
+ifndef NDK_UNIFIED_SYSROOT_PATH
+    NDK_UNIFIED_SYSROOT_PATH := $(TOOLCHAIN_ROOT)/sysroot
+endif
+
+# TODO: Have the driver add the library path to -rpath-link.
+SYSROOT_INC := $(NDK_UNIFIED_SYSROOT_PATH)
+
+SYSROOT_LIB_DIR := $(NDK_UNIFIED_SYSROOT_PATH)/usr/lib/$(TOOLCHAIN_NAME)
+SYSROOT_API_LIB_DIR := $(SYSROOT_LIB_DIR)/$(TARGET_PLATFORM_LEVEL)
+
+# API-specific library directory comes first to make the linker prefer shared
+# libs over static libs.
+SYSROOT_LINK_ARG := -L $(SYSROOT_API_LIB_DIR) -L $(SYSROOT_LIB_DIR)
+
+# Architecture specific headers like asm/ and machine/ are installed to an
+# arch-$ARCH subdirectory of the sysroot.
+SYSROOT_ARCH_INC_ARG := \
+    -isystem $(SYSROOT_INC)/usr/include/$(TOOLCHAIN_NAME)
+
+NDK_TOOLCHAIN_RESOURCE_DIR := $(shell $(TARGET_CXX) -print-resource-dir)
+NDK_TOOLCHAIN_LIB_DIR := $(strip $(NDK_TOOLCHAIN_RESOURCE_DIR))/lib/linux
+
+clean-installed-binaries::
+
+
+# ====================================================================
+# gdb.mk : BEGIN
+# ====================================================================
+
+NDK_APP_GDBSERVER := $(NDK_APP_DST_DIR)/gdbserver
+NDK_APP_GDBSETUP := $(NDK_APP_DST_DIR)/gdb.setup
+
+ifeq ($(NDK_APP_DEBUGGABLE),true)
+ifeq ($(TARGET_SONAME_EXTENSION),.so)
+
+installed_modules: $(NDK_APP_GDBSERVER)
+
+$(NDK_APP_GDBSERVER): PRIVATE_ABI     := $(TARGET_ARCH_ABI)
+$(NDK_APP_GDBSERVER): PRIVATE_NAME    := $(TOOLCHAIN_NAME)
+$(NDK_APP_GDBSERVER): PRIVATE_SRC     := $(TARGET_GDBSERVER)
+$(NDK_APP_GDBSERVER): PRIVATE_DST     := $(NDK_APP_GDBSERVER)
+
+$(call generate-file-dir,$(NDK_APP_GDBSERVER))
+
+$(NDK_APP_GDBSERVER): clean-installed-binaries
+	$(call host-echo-build-step,$(PRIVATE_ABI),Gdbserver) "[$(PRIVATE_NAME)] $(call pretty-dir,$(PRIVATE_DST))"
+	$(hide) $(call host-install,$(PRIVATE_SRC),$(PRIVATE_DST))
+endif
+
+# Install gdb.setup for both .so and .bc projects
+ifneq (,$(filter $(TARGET_SONAME_EXTENSION),.so .bc))
+installed_modules: $(NDK_APP_GDBSETUP)
+
+$(NDK_APP_GDBSETUP): PRIVATE_ABI := $(TARGET_ARCH_ABI)
+$(NDK_APP_GDBSETUP): PRIVATE_DST := $(NDK_APP_GDBSETUP)
+$(NDK_APP_GDBSETUP): PRIVATE_SOLIB_PATH := $(TARGET_OUT)
+$(NDK_APP_GDBSETUP): PRIVATE_SRC_DIRS := $(SYSROOT_INC)
+
+$(NDK_APP_GDBSETUP):
+	$(call host-echo-build-step,$(PRIVATE_ABI),Gdbsetup) "$(call pretty-dir,$(PRIVATE_DST))"
+	$(hide) $(HOST_ECHO) "set solib-search-path $(call host-path,$(PRIVATE_SOLIB_PATH))" > $(PRIVATE_DST)
+	$(hide) $(HOST_ECHO) "directory $(call host-path,$(call remove-duplicates,$(PRIVATE_SRC_DIRS)))" >> $(PRIVATE_DST)
+
+$(call generate-file-dir,$(NDK_APP_GDBSETUP))
+
+# This prevents parallel execution to clear gdb.setup after it has been written to
+$(NDK_APP_GDBSETUP): clean-installed-binaries
+endif
+endif
+
+# ====================================================================
+# gdb.mk : END
+# ====================================================================
+
+# free the dictionary of LOCAL_MODULE definitions
+$(call modules-clear)
+
+$(call ndk-stl-select,$(NDK_APP_STL))
+
+# now parse the Android.mk for the application, this records all
+# module declarations, but does not populate the dependency graph yet.
+include $(NDK_APP_BUILD_SCRIPT)
+
+# Avoid computing sanitizer/wrap.sh things in the DUMP_VAR case because both of
+# these will create build rules and we want to avoid that. The DUMP_VAR case
+# also doesn't parse the module definitions, so we're missing a lot of the
+# information we need.
+ifeq (,$(DUMP_VAR))
+    # Comes after NDK_APP_BUILD_SCRIPT because we need to know if *any* module
+    # has -fsanitize in its ldflags.
+# cmjo : commenting
+#    include $(BUILD_SYSTEM)/sanitizers.mk
+    include $(BUILD_SYSTEM)/openmp.mk
+
+    ifneq ($(NDK_APP_WRAP_SH_$(TARGET_ARCH_ABI)),)
+        include $(BUILD_SYSTEM)/install_wrap_sh.mk
+    endif
+endif
+
+$(call ndk-stl-add-dependencies,$(NDK_APP_STL))
+
+# recompute all dependencies between modules
+$(call modules-compute-dependencies)
+
+# for debugging purpose
+ifdef NDK_DEBUG_MODULES
+$(call modules-dump-database)
+endif
+
+# now, really build the modules, the second pass allows one to deal
+# with exported values
+$(foreach __pass2_module,$(__ndk_modules),\
+    $(eval LOCAL_MODULE := $(__pass2_module))\
+    $(eval include $(BUILD_SYSTEM)/build-binary.mk)\
+)
+
+# Now compute the closure of all module dependencies.
+#
+# If APP_MODULES is not defined in the Application.mk, we
+# will build all modules that were listed from the top-level Android.mk
+# and the installable imported ones they depend on
+#
+ifeq ($(strip $(NDK_APP_MODULES)),)
+    WANTED_MODULES := $(call modules-get-all-installable,$(modules-get-top-list))
+    ifeq (,$(strip $(WANTED_MODULES)))
+        WANTED_MODULES := $(modules-get-top-list)
+        $(call ndk_log,[$(TARGET_ARCH_ABI)] No installable modules in project - forcing static library build)
+    endif
+else
+    WANTED_MODULES := $(call module-get-all-dependencies,$(NDK_APP_MODULES))
+endif
+
+$(call ndk_log,[$(TARGET_ARCH_ABI)] Modules to build: $(WANTED_MODULES))
+
+WANTED_INSTALLED_MODULES += $(call map,module-get-installed,$(WANTED_MODULES))
+
+# ====================================================================
+# setup-toolchain.mk : END
+# ====================================================================
+
+# ====================================================================
+# setup-abi.mk : END
+# ====================================================================
+
+
+_sub_commands_arg := $(sub_commands_json)
+
+ifeq ($(LOCAL_SHORT_COMMANDS),true)
+compile_commands_list_file := $(NDK_APP_OUT)/compile_commands.list
+_sub_commands_arg := @$(compile_commands_list_file)
+$(compile_commands_list_file): $(sub_commands_json)
+$(call generate-list-file,$(sub_commands_json),$(compile_commands_list_file))
+endif
+
+$(COMPILE_COMMANDS_JSON): PRIVATE_SUB_COMMANDS := $(_sub_commands_arg)
+$(COMPILE_COMMANDS_JSON): $(compile_commands_list_file) $(sub_commands_json)
+	$(hide) $(HOST_PYTHON) $(BUILD_PY)/gen_compile_db.py -o $@ \
+        $(PRIVATE_SUB_COMMANDS)
+
+# ====================================================================
+# setup-app.mk : END
+# ====================================================================
+
 
 # --------------------------------------------------------------------
 #

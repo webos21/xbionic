@@ -52,7 +52,7 @@ linux:
 macos:
 	@$(MKDIR) -p "$(destdir)/$@"
 	$(MAKE) -C $(jemalloc_src) -f main.mk TARGET=$@
-	$(MAKE) -C $(xbionic_src) -f main.mk TARGET=$@
+#	$(MAKE) -C $(xbionic_src) -f main.mk TARGET=$@
 
 win64:
 	@$(MKDIR) -p "$(destdir)/$@"
