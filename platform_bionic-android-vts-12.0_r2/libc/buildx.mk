@@ -66,10 +66,10 @@ libc_common_flags = \
     -Werror=pointer-to-int-cast     \
     -Werror=int-to-pointer-cast     \
     -Werror=type-limits             \
-    -Werror                         \
-    -Wexit-time-destructors
+    -Werror                         
 ifneq ($(TARGET_ARCH),x86_64)
 libc_common_flags += \
+    -Wexit-time-destructors
     -fno-emulated-tls
 endif
 

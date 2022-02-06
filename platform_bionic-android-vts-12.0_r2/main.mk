@@ -204,27 +204,6 @@ ifdef NDK_TOOLCHAIN
     $(call ndk_log, Using specific toolchain $(NDK_TOOLCHAIN))
 endif
 
-$(call ndk_log, This NDK supports the following target architectures and ABIS:)
-$(foreach arch,$(NDK_ALL_ARCHS),\
-    $(call ndk_log, $(space)$(space)$(arch): $(NDK_ARCH.$(arch).abis))\
-)
-$(call ndk_log, This NDK supports the following toolchains and target ABIs:)
-$(foreach tc,$(NDK_ALL_TOOLCHAINS),\
-    $(call ndk_log, $(space)$(space)$(tc):  $(NDK_TOOLCHAIN.$(tc).abis))\
-)
-
-$(call ndk_log,Toolchain Variables)
-$(call ndk_log,$(space) TARGET_TOOLCHAIN = '$(TARGET_TOOLCHAIN)')
-$(call ndk_log,$(space) TARGET_PLATFORM  = '$(TARGET_PLATFORM)')
-$(call ndk_log,$(space) TARGET_ARCH_ABI  = '$(TARGET_ARCH_ABI)')
-$(call ndk_log,$(space) TARGET_ABI       = '$(TARGET_ABI)')
-$(call ndk_log,$(space) SYSROOT          = '$(SYSROOT)')
-$(call ndk_log,$(space) TARGET_CRTBEGIN_STATIC_O         = '$(TARGET_CRTBEGIN_STATIC_O)')
-$(call ndk_log,$(space) TARGET_CRTBEGIN_DYNAMIC_O        = '$(TARGET_CRTBEGIN_DYNAMIC_O)')
-$(call ndk_log,$(space) TARGET_CRTEND_O                  = '$(TARGET_CRTEND_O)')
-$(call ndk_log,$(space) TARGET_PREBUILT_SHARED_LIBRARIES = '$(TARGET_PREBUILT_SHARED_LIBRARIES)')
-$(call ndk_log,$(space) TARGET_PREBUILT_SHARED_LIBRARIES = '$(TARGET_PREBUILT_SHARED_LIBRARIES)')
-
 # ====================================================================
 # init.mk : END
 # ====================================================================
@@ -289,9 +268,10 @@ NDK_APP_MODULES :=            \
     c_fortify                 \
 
 NDK_ALL_APPS := $(APP)
-$(call set,NDK_APP.bionic,Application.mk,$(basedir)/apps/bionic/Application.mk)
-$(call set,NDK_APP.bionic,APP_MODULES,$(NDK_APP_MODULES))
-$(call set,NDK_APP.bionic,APP_PROJECT_PATH,$(basedir)/apps/bionic/project)
+
+$(call set,NDK_APP.malloc,Application.mk,$(basedir)/apps/malloc/Application.mk)
+$(call set,NDK_APP.malloc,APP_MODULES,$(NDK_APP_MODULES))
+$(call set,NDK_APP.malloc,APP_PROJECT_PATH,$(basedir)/apps/malloc/project)
 
 $(call ndk_log,App Settings)
 $(call ndk_log,$(space) APP              = '$(APP)')
@@ -299,9 +279,9 @@ $(call ndk_log,$(space) NDK_APPS         = '$(NDK_APPS)')
 $(call ndk_log,$(space) NDK_APP_ABI      = '$(NDK_APP_ABI)')
 $(call ndk_log,$(space) NDK_ALL_APPS     = '$(NDK_ALL_APPS)')
 $(call ndk_log,$(space) NDK_APP_VARS     = '$(NDK_APP_VARS)')
-$(call ndk_log,$(space) NDK_APP.bionic.Application.mk   = '$(call get,NDK_APP.bionic,Application.mk)')
-$(call ndk_log,$(space) NDK_APP.bionic.APP_MODULES      = '$(call get,NDK_APP.bionic,APP_MODULES)')
-$(call ndk_log,$(space) NDK_APP.bionic.APP_PROJECT_PATH = '$(call get,NDK_APP.bionic,APP_PROJECT_PATH)')
+$(call ndk_log,$(space) NDK_APP.malloc.Application.mk   = '$(call get,NDK_APP.malloc,Application.mk)')
+$(call ndk_log,$(space) NDK_APP.malloc.APP_MODULES      = '$(call get,NDK_APP.malloc,APP_MODULES)')
+$(call ndk_log,$(space) NDK_APP.malloc.APP_PROJECT_PATH = '$(call get,NDK_APP.malloc,APP_PROJECT_PATH)')
 
 $(call __ndk_info,Building for application '$(NDK_APPS)')
 
@@ -364,9 +344,355 @@ ANDROID_MK_INCLUDED := \
 all: installed_modules host_libraries host_executables clang_tidy_rules
 
 
-$(foreach _app,$(NDK_APPS),\
-  $(eval include $(BUILD_SYSTEM)/setup-app.mk)\
+# ====================================================================
+# setup-app.mk : BEGIN
+# ====================================================================
+
+_app = $(APP)
+
+$(call assert-defined,_app)
+
+_map := NDK_APP.$(_app)
+
+# ok, let's parse all Android.mk source files in order to build
+# the modules for this app.
+#
+
+# Restore the APP_XXX variables just for this pass as NDK_APP_XXX
+#
+NDK_APP_NAME           := $(_app)
+NDK_APP_APPLICATION_MK := $(call get,$(_map),Application.mk)
+
+$(foreach __name,$(NDK_APP_VARS),\
+  $(eval NDK_$(__name) := $(call get,$(_map),$(__name)))\
 )
+
+# make the application depend on the modules it requires
+.PHONY: ndk-app-$(_app)
+ndk-app-$(_app): $(NDK_APP_MODULES)
+all: ndk-app-$(_app)
+
+# The ABI(s) to use
+NDK_APP_ABI := $(subst $(comma),$(space),$(strip $(NDK_APP_ABI)))
+ifndef NDK_APP_ABI
+    NDK_APP_ABI := $(NDK_DEFAULT_ABIS)
+endif
+
+NDK_ABI_FILTER := $(strip $(NDK_ABI_FILTER))
+ifdef NDK_ABI_FILTER
+    $(eval $(NDK_ABI_FILTER))
+endif
+
+# If APP_ABI is 'all', then set it to all supported ABIs
+# Otherwise, check that we don't have an invalid value here.
+#
+ifeq ($(NDK_APP_ABI),all)
+    NDK_APP_ABI := $(NDK_APP_ABI_ALL_EXPANDED)
+else ifeq ($(NDK_APP_ABI),all32)
+    NDK_APP_ABI := $(NDK_APP_ABI_ALL32_EXPANDED)
+else ifeq ($(NDK_APP_ABI),all64)
+    NDK_APP_ABI := $(NDK_APP_ABI_ALL64_EXPANDED)
+else
+    # check the target ABIs for this application
+    _bad_abis = $(strip $(filter-out $(NDK_ALL_ABIS),$(NDK_APP_ABI)))
+    ifneq ($(_bad_abis),)
+        ifneq ($(filter $(_bad_abis),armeabi-v7a-hard),)
+            $(call __ndk_info,armeabi-v7a-hard is no longer supported. Use armeabi-v7a.)
+            $(call __ndk_info,See https://android.googlesource.com/platform/ndk/+/master/docs/HardFloatAbi.md)
+        else ifneq ($(filter $(_bad_abis),armeabi),)
+            $(call __ndk_info,The armeabi ABI is no longer supported. Use armeabi-v7a.)
+        else ifneq ($(filter $(_bad_abis),mips mips64),)
+            $(call __ndk_info,MIPS and MIPS64 are no longer supported.)
+        endif
+        $(call __ndk_info,NDK Application '$(_app)' targets unknown ABI(s): $(_bad_abis))
+        $(call __ndk_info,Please fix the APP_ABI definition in $(NDK_APP_APPLICATION_MK))
+        $(call __ndk_error,Aborting)
+    endif
+endif
+
+_deprecated_abis := $(filter $(NDK_DEPRECATED_ABIS),$(NDK_APP_ABI))
+ifneq ($(_deprecated_abis),)
+    $(call __ndk_warning,Application targets deprecated ABI(s): $(_deprecated_abis))
+    $(call __ndk_warning,Support for these ABIs will be removed in a future NDK release.)
+endif
+
+# Clear all installed binaries for this application. This ensures that if the
+# build fails or if you remove a module, you're not going to mistakenly package
+# an obsolete version.
+#
+# Historically this would clear every ABI, meaning that the following workflow
+# would leave only x86_64 present in the lib dir on completion:
+#
+#     for abi in armeabi-v7a arm64-v8a x86 x86_64; do
+#         ndk-build APP_ABI=$abi
+#     done
+#
+# This is the workflow used by gradle. They currently override NDK_ALL_ABIS (an
+# internal variable) to workaround this behavior. Changing this behavior allows
+# them to remove their workaround and stop clobbering our implementation
+# details.
+ifeq ($(NDK_APP.$(_app).cleaned_binaries),)
+    NDK_APP.$(_app).cleaned_binaries := true
+
+clean-installed-binaries::
+	$(hide) $(call host-rm,$(NDK_APP_ABI:%=$(NDK_APP_LIBS_OUT)/%/*))
+	$(hide) $(call host-rm,$(NDK_APP_ABI:%=$(NDK_APP_LIBS_OUT)/%/gdbserver))
+	$(hide) $(call host-rm,$(NDK_APP_ABI:%=$(NDK_APP_LIBS_OUT)/%/gdb.setup))
+endif
+
+
+# ====================================================================
+# TOOLCHAIN Configuration Optimization : BEGIN
+# ====================================================================
+
+$(call ndk_log,Building application '$(NDK_APP_NAME)' for ABI '$(TARGET_ARCH_ABI)')
+
+TARGET_OUT := $(NDK_APP_OUT)/$(_app)/$(TARGET_ARCH_ABI)
+
+# Separate the debug and release objects. This prevents rebuilding
+# everything when you switch between these two modes. For projects
+# with lots of C++ sources, this can be a considerable time saver.
+ifeq ($(NDK_APP_OPTIM),debug)
+TARGET_OBJS := $(TARGET_OUT)/objs-debug
+else
+TARGET_OBJS := $(TARGET_OUT)/objs
+endif
+
+TARGET_GDB_SETUP := $(TARGET_OUT)/setup.gdb
+
+# RS triple
+ifeq ($(TARGET_ARCH_ABI),armeabi-v7a)
+  RS_TRIPLE := armv7-none-linux-gnueabi
+endif
+ifeq ($(TARGET_ARCH_ABI),armeabi)
+  RS_TRIPLE := arm-none-linux-gnueabi
+endif
+ifeq ($(TARGET_ARCH_ABI),arm64-v8a)
+  RS_TRIPLE := aarch64-linux-android
+endif
+ifeq ($(TARGET_ARCH_ABI),mips)
+  RS_TRIPLE := mipsel-unknown-linux
+endif
+ifeq ($(TARGET_ARCH_ABI),x86)
+  RS_TRIPLE := i686-unknown-linux
+endif
+ifeq ($(TARGET_ARCH_ABI),x86_64)
+  RS_TRIPLE := x86_64-unknown-linux
+endif
+
+
+# We expect the gdbserver binary for this toolchain to be located at its root.
+TARGET_GDBSERVER := $(NDK_ROOT)/prebuilt/android-$(TARGET_ARCH)/gdbserver/gdbserver
+
+# compute NDK_APP_DST_DIR as the destination directory for the generated files
+NDK_APP_DST_DIR := $(NDK_APP_LIBS_OUT)/$(TARGET_ARCH_ABI)
+
+ifeq ($(TARGET_ARCH_ABI),x86_64)
+NDK_TOOLCHAIN_RESOURCE_DIR := $(shell $(TARGET_CXX) -print-search-dirs)
+else
+NDK_TOOLCHAIN_RESOURCE_DIR := $(shell $(TARGET_CXX) -print-resource-dir)
+endif
+NDK_TOOLCHAIN_LIB_DIR := $(strip $(NDK_TOOLCHAIN_RESOURCE_DIR))/lib/linux
+
+
+# This function will be called to determine the target CFLAGS used to build
+# a C or Assembler source file, based on its tags.
+#
+TARGET-process-src-files-tags = \
+$(eval __debug_sources := $(call get-src-files-with-tag,debug)) \
+$(eval __release_sources := $(call get-src-files-without-tag,debug)) \
+$(call set-src-files-target-cflags, $(__debug_sources), $(TARGET_arm64_debug_CFLAGS)) \
+$(call set-src-files-target-cflags, $(__release_sources),$(TARGET_arm64_release_CFLAGS)) \
+
+# Setup sysroot variables.
+#
+# Note that these are not needed for the typical case of invoking Clang, as
+# Clang already knows where the sysroot is relative to itself. We still need to
+# manually refer to these in some places because other tools such as yasm and
+# the renderscript compiler don't have this knowledge.
+
+# SYSROOT_INC points to a directory that contains all public header files for a
+# given platform.
+ifndef NDK_UNIFIED_SYSROOT_PATH
+    NDK_UNIFIED_SYSROOT_PATH := $(TOOLCHAIN_ROOT)/sysroot
+endif
+
+# TODO: Have the driver add the library path to -rpath-link.
+SYSROOT_INC := $(NDK_UNIFIED_SYSROOT_PATH)
+
+SYSROOT_LIB_DIR := $(NDK_UNIFIED_SYSROOT_PATH)/usr/lib/$(TOOLCHAIN_NAME)
+SYSROOT_API_LIB_DIR := $(SYSROOT_LIB_DIR)/$(TARGET_PLATFORM_LEVEL)
+
+# API-specific library directory comes first to make the linker prefer shared
+# libs over static libs.
+SYSROOT_LINK_ARG := -L $(SYSROOT_API_LIB_DIR) -L $(SYSROOT_LIB_DIR)
+
+# Architecture specific headers like asm/ and machine/ are installed to an
+# arch-$ARCH subdirectory of the sysroot.
+SYSROOT_ARCH_INC_ARG := \
+    -isystem $(SYSROOT_INC)/usr/include/$(TOOLCHAIN_NAME)
+
+$(call ndk_log, This NDK supports the following target architectures and ABIS:)
+$(foreach arch,$(NDK_ALL_ARCHS),\
+    $(call ndk_log, $(space)$(space)$(arch): $(NDK_ARCH.$(arch).abis))\
+)
+$(call ndk_log, This NDK supports the following toolchains and target ABIs:)
+$(foreach tc,$(NDK_ALL_TOOLCHAINS),\
+    $(call ndk_log, $(space)$(space)$(tc):  $(NDK_TOOLCHAIN.$(tc).abis))\
+)
+
+$(call ndk_log,Toolchain Variables)
+$(call ndk_log,$(space) TARGET_TOOLCHAIN = '$(TARGET_TOOLCHAIN)')
+$(call ndk_log,$(space) TARGET_PLATFORM  = '$(TARGET_PLATFORM)')
+$(call ndk_log,$(space) TARGET_ARCH_ABI  = '$(TARGET_ARCH_ABI)')
+$(call ndk_log,$(space) TARGET_ABI       = '$(TARGET_ABI)')
+$(call ndk_log,$(space) SYSROOT          = '$(SYSROOT)')
+
+# ====================================================================
+# TOOLCHAIN Configuration Optimization : END
+# ====================================================================
+
+
+clean-installed-binaries::
+
+
+# ====================================================================
+# gdb.mk : BEGIN
+# ====================================================================
+
+NDK_APP_GDBSERVER := $(NDK_APP_DST_DIR)/gdbserver
+NDK_APP_GDBSETUP := $(NDK_APP_DST_DIR)/gdb.setup
+
+ifeq ($(NDK_APP_DEBUGGABLE),true)
+ifeq ($(TARGET_SONAME_EXTENSION),.so)
+
+installed_modules: $(NDK_APP_GDBSERVER)
+
+$(NDK_APP_GDBSERVER): PRIVATE_ABI     := $(TARGET_ARCH_ABI)
+$(NDK_APP_GDBSERVER): PRIVATE_NAME    := $(TOOLCHAIN_NAME)
+$(NDK_APP_GDBSERVER): PRIVATE_SRC     := $(TARGET_GDBSERVER)
+$(NDK_APP_GDBSERVER): PRIVATE_DST     := $(NDK_APP_GDBSERVER)
+
+$(call generate-file-dir,$(NDK_APP_GDBSERVER))
+
+$(NDK_APP_GDBSERVER): clean-installed-binaries
+	$(call host-echo-build-step,$(PRIVATE_ABI),Gdbserver) "[$(PRIVATE_NAME)] $(call pretty-dir,$(PRIVATE_DST))"
+	$(hide) $(call host-install,$(PRIVATE_SRC),$(PRIVATE_DST))
+endif
+
+# Install gdb.setup for both .so and .bc projects
+ifneq (,$(filter $(TARGET_SONAME_EXTENSION),.so .bc))
+installed_modules: $(NDK_APP_GDBSETUP)
+
+$(NDK_APP_GDBSETUP): PRIVATE_ABI := $(TARGET_ARCH_ABI)
+$(NDK_APP_GDBSETUP): PRIVATE_DST := $(NDK_APP_GDBSETUP)
+$(NDK_APP_GDBSETUP): PRIVATE_SOLIB_PATH := $(TARGET_OUT)
+$(NDK_APP_GDBSETUP): PRIVATE_SRC_DIRS := $(SYSROOT_INC)
+
+$(NDK_APP_GDBSETUP):
+	$(call host-echo-build-step,$(PRIVATE_ABI),Gdbsetup) "$(call pretty-dir,$(PRIVATE_DST))"
+	$(hide) $(HOST_ECHO) "set solib-search-path $(call host-path,$(PRIVATE_SOLIB_PATH))" > $(PRIVATE_DST)
+	$(hide) $(HOST_ECHO) "directory $(call host-path,$(call remove-duplicates,$(PRIVATE_SRC_DIRS)))" >> $(PRIVATE_DST)
+
+$(call generate-file-dir,$(NDK_APP_GDBSETUP))
+
+# This prevents parallel execution to clear gdb.setup after it has been written to
+$(NDK_APP_GDBSETUP): clean-installed-binaries
+endif
+endif
+
+# ====================================================================
+# gdb.mk : END
+# ====================================================================
+
+# free the dictionary of LOCAL_MODULE definitions
+$(call modules-clear)
+
+$(call ndk-stl-select,$(NDK_APP_STL))
+
+# now parse the Android.mk for the application, this records all
+# module declarations, but does not populate the dependency graph yet.
+include $(NDK_APP_BUILD_SCRIPT)
+
+# Avoid computing sanitizer/wrap.sh things in the DUMP_VAR case because both of
+# these will create build rules and we want to avoid that. The DUMP_VAR case
+# also doesn't parse the module definitions, so we're missing a lot of the
+# information we need.
+ifeq (,$(DUMP_VAR))
+    # Comes after NDK_APP_BUILD_SCRIPT because we need to know if *any* module
+    # has -fsanitize in its ldflags.
+# cmjo : commenting
+#    include $(BUILD_SYSTEM)/sanitizers.mk
+    include $(BUILD_SYSTEM)/openmp.mk
+
+    ifneq ($(NDK_APP_WRAP_SH_$(TARGET_ARCH_ABI)),)
+        include $(BUILD_SYSTEM)/install_wrap_sh.mk
+    endif
+endif
+
+$(call ndk-stl-add-dependencies,$(NDK_APP_STL))
+
+# recompute all dependencies between modules
+$(call modules-compute-dependencies)
+
+# for debugging purpose
+ifdef NDK_DEBUG_MODULES
+$(call modules-dump-database)
+endif
+
+# now, really build the modules, the second pass allows one to deal
+# with exported values
+$(foreach __pass2_module,$(__ndk_modules),\
+    $(eval LOCAL_MODULE := $(__pass2_module))\
+    $(eval include $(BUILD_SYSTEM)/build-binary.mk)\
+)
+
+# Now compute the closure of all module dependencies.
+#
+# If APP_MODULES is not defined in the Application.mk, we
+# will build all modules that were listed from the top-level Android.mk
+# and the installable imported ones they depend on
+#
+ifeq ($(strip $(NDK_APP_MODULES)),)
+    WANTED_MODULES := $(call modules-get-all-installable,$(modules-get-top-list))
+    ifeq (,$(strip $(WANTED_MODULES)))
+        WANTED_MODULES := $(modules-get-top-list)
+        $(call ndk_log,[$(TARGET_ARCH_ABI)] No installable modules in project - forcing static library build)
+    endif
+else
+    WANTED_MODULES := $(call module-get-all-dependencies,$(NDK_APP_MODULES))
+endif
+
+$(call ndk_log,[$(TARGET_ARCH_ABI)] Modules to build: $(WANTED_MODULES))
+
+WANTED_INSTALLED_MODULES += $(call map,module-get-installed,$(WANTED_MODULES))
+
+# ====================================================================
+# setup-toolchain.mk : END
+# ====================================================================
+
+# ====================================================================
+# setup-abi.mk : END
+# ====================================================================
+
+_sub_commands_arg := $(sub_commands_json)
+
+ifeq ($(LOCAL_SHORT_COMMANDS),true)
+compile_commands_list_file := $(NDK_APP_OUT)/compile_commands.list
+_sub_commands_arg := @$(compile_commands_list_file)
+$(compile_commands_list_file): $(sub_commands_json)
+$(call generate-list-file,$(sub_commands_json),$(compile_commands_list_file))
+endif
+
+$(COMPILE_COMMANDS_JSON): PRIVATE_SUB_COMMANDS := $(_sub_commands_arg)
+$(COMPILE_COMMANDS_JSON): $(compile_commands_list_file) $(sub_commands_json)
+	$(hide) $(HOST_PYTHON) $(BUILD_PY)/gen_compile_db.py -o $@ \
+        $(PRIVATE_SUB_COMMANDS)
+
+# ====================================================================
+# setup-app.mk : END
+# ====================================================================
+
 
 # --------------------------------------------------------------------
 #

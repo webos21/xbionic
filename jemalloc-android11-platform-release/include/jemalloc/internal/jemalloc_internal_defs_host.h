@@ -127,7 +127,9 @@
  * Among other things, it must be possible to initialize a mutex without
  * triggering allocation in order for threaded allocation to be safe.
  */
+#ifndef _WIN32
 #define JEMALLOC_THREADED_INIT 
+#endif
 
 /*
  * Defined if the pthreads implementation defines
@@ -171,7 +173,9 @@
  * This makes it possible to allocate/deallocate objects without any locking
  * when the cache is in the steady state.
  */
+#ifndef JEMALLOC_TCACHE
 #define JEMALLOC_TCACHE 
+#endif
 
 /*
  * JEMALLOC_DSS enables use of sbrk(2) to allocate chunks from the data storage
@@ -223,7 +227,9 @@
 /* #undef JEMALLOC_MUNMAP */
 
 /* TLS is used to map arenas and magazine caches to threads. */
+#ifndef _WIN32
 #define JEMALLOC_TLS 
+#endif
 
 /*
  * Used to mark unreachable code to quiet "end of non-void" compiler warnings.
@@ -286,7 +292,7 @@
  * arguments to madvise(2).
  */
 /* ANDROID: Do not enable huge pages because it can increase PSS. */
-#ifndef __APPLE__
+#if !defined(__APPLE__) && !defined(_WIN32)
 #define JEMALLOC_THP 
 #endif
 

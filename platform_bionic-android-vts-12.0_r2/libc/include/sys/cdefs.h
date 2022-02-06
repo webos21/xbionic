@@ -343,6 +343,7 @@
 /* Used to rename functions so that the compiler emits a call to 'x' rather than the function this was applied to. */
 #define __RENAME(x) __asm__(#x)
 
+#if !__MINGW64__ 
 #if __has_builtin(__builtin_umul_overflow) || __GNUC__ >= 5
 #if defined(__LP64__)
 #define __size_mul_overflow(a, b, result) __builtin_umull_overflow(a, b, result)
@@ -356,6 +357,13 @@ int __size_mul_overflow(__SIZE_TYPE__ a, __SIZE_TYPE__ b, __SIZE_TYPE__ *result)
     static const __SIZE_TYPE__ mul_no_overflow = 1UL << (sizeof(__SIZE_TYPE__) * 4);
     return (a >= mul_no_overflow || b >= mul_no_overflow) && a > 0 && (__SIZE_TYPE__)-1 / a < b;
 }
+#endif
+#else
+#if defined(__LP64__)
+#define __size_mul_overflow(a, b, result) __builtin_umull_overflow(a, b, result)
+#else
+#define __size_mul_overflow(a, b, result) __builtin_umul_overflow(a, b, result)
+#endif
 #endif
 
 /*

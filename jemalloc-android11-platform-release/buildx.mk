@@ -62,6 +62,11 @@ jemalloc_defaults = \
 	$(android_product_variables)    \
 	$(common_c_local_includes)
 
+
+#-----------------------------------------------------------------------
+# jemalloc static library
+#-----------------------------------------------------------------------
+
 lib_src_files = \
     src/arena.c        \
     src/atomic.c       \
@@ -92,6 +97,30 @@ lib_src_files = \
     src/util.c         \
     src/witness.c
 
+include $(CLEAR_VARS)
+
+LOCAL_MODULE    := libjemalloc
+LOCAL_CFLAGS    += $(jemalloc_defaults)
+LOCAL_SRC_FILES := $(lib_src_files)
+
+include $(BUILD_STATIC_LIBRARY)
+
+#-----------------------------------------------------------------------
+# jemalloc static jet library
+#-----------------------------------------------------------------------
+
+include $(CLEAR_VARS)
+
+LOCAL_MODULE    := libjemalloc_jet
+LOCAL_CFLAGS    += $(jemalloc_defaults) -DJEMALLOC_JET
+LOCAL_SRC_FILES := $(lib_src_files)
+
+include $(BUILD_STATIC_LIBRARY)
+
+
+#-----------------------------------------------------------------------
+# jemalloc unit test library
+#-----------------------------------------------------------------------
 
 jemalloc_testlib_srcs = \
     test/src/btalloc.c      \
@@ -105,6 +134,19 @@ jemalloc_testlib_srcs = \
     test/src/thd.c          \
     test/src/timer.c
 
+include $(CLEAR_VARS)
+
+LOCAL_MODULE     := libjemalloc_unittest
+LOCAL_CFLAGS     += $(jemalloc_defaults) -DJEMALLOC_UNIT_TEST 
+LOCAL_C_INCLUDES := test/src test/include
+LOCAL_SRC_FILES  := $(jemalloc_testlib_srcs)
+
+include $(BUILD_STATIC_LIBRARY)
+
+
+#-----------------------------------------------------------------------
+# jemalloc unit test library
+#-----------------------------------------------------------------------
 
 unit_tests = \
     test/unit/a0.c                  \
@@ -149,54 +191,58 @@ unit_tests = \
     test/unit/witness.c             \
     test/unit/zero.c
 
-
-
-#-----------------------------------------------------------------------
-# jemalloc static library
-#-----------------------------------------------------------------------
-
 include $(CLEAR_VARS)
 
-LOCAL_MODULE    := libjemalloc
-LOCAL_CFLAGS    += $(jemalloc_defaults)
-LOCAL_SRC_FILES := $(lib_src_files)
-
-include $(BUILD_STATIC_LIBRARY)
-
-#-----------------------------------------------------------------------
-# jemalloc static jet library
-#-----------------------------------------------------------------------
-
-include $(CLEAR_VARS)
-
-LOCAL_MODULE    := libjemalloc_jet
-LOCAL_CFLAGS    += $(jemalloc_defaults) -DJEMALLOC_JET
-LOCAL_SRC_FILES := $(lib_src_files)
+LOCAL_MODULE           := jemalloc_unittests
+LOCAL_CFLAGS           += $(jemalloc_defaults) -DJEMALLOC_UNIT_TEST
+LOCAL_C_INCLUDES       := test/src test/include
+LOCAL_SRC_FILES        := $(unit_tests)
+LOCAL_STATIC_LIBRARIES := libjemalloc_unittest
 
 include $(BUILD_STATIC_LIBRARY)
 
 
 #-----------------------------------------------------------------------
-# jemalloc unit test library
+# jemalloc integration test library
 #-----------------------------------------------------------------------
 
 include $(CLEAR_VARS)
 
-LOCAL_MODULE    := libjemalloc_unittest
-LOCAL_CFLAGS    += $(jemalloc_defaults) -DJEMALLOC_UNIT_TEST -Itest/src -Itest/include
-LOCAL_SRC_FILES := $(jemalloc_testlib_srcs)
+LOCAL_MODULE           := libjemalloc_integrationtest
+LOCAL_CFLAGS           += $(jemalloc_defaults) -DJEMALLOC_INTEGRATION_TEST
+LOCAL_C_INCLUDES       := test/src test/include
+LOCAL_SRC_FILES        := $(jemalloc_testlib_srcs) $(lib_src_files)
 
 include $(BUILD_STATIC_LIBRARY)
 
 
 #-----------------------------------------------------------------------
-# jemalloc unit test library
+# jemalloc integration test library
 #-----------------------------------------------------------------------
+
+integration_tests = \
+    test/integration/aligned_alloc.c          \
+    test/integration/allocated.c              \
+    test/integration/chunk.c                  \
+    test/integration/MALLOCX_ARENA.c          \
+    test/integration/mallocx.c                \
+    test/integration/overflow.c               \
+    test/integration/posix_memalign.c         \
+    test/integration/rallocx.c                \
+    test/integration/sdallocx.c               \
+    test/integration/thread_arena.c           \
+    test/integration/thread_tcache_enabled.c  \
+    test/integration/xallocx.c
+
+android_integration_tests = \
+    test/integration/iterate.c
 
 include $(CLEAR_VARS)
 
-LOCAL_MODULE    := jemalloc_unittests
-LOCAL_CFLAGS    += $(jemalloc_defaults) -DJEMALLOC_UNIT_TEST -Itest/src -Itest/include
-LOCAL_SRC_FILES := $(unit_tests)
+LOCAL_MODULE           := jemalloc_integrationtests
+LOCAL_CFLAGS           += $(jemalloc_defaults) -DJEMALLOC_INTEGRATION_TEST
+LOCAL_C_INCLUDES       := test/src test/include
+LOCAL_SRC_FILES        := $(integration_tests)
+LOCAL_STATIC_LIBRARIES := libjemalloc_integrationtest
 
 include $(BUILD_STATIC_LIBRARY)

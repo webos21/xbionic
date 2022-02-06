@@ -176,7 +176,9 @@ else
     # That part of the driver does not account for -nostdlib++. We can fix the
     # behavior by using -stdlib=libstdc++ so it rewrites -lstdc++ to -lstdc++
     # instead of -lc++.
-    LOCAL_LDFLAGS += -stdlib=libstdc++
+    # cmjo : modifying!!
+    #LOCAL_LDFLAGS += -stdlib=libstdc++
+    LOCAL_LDFLAGS += -static-libstdc++
 endif
 
 #
@@ -503,7 +505,8 @@ linker_ldflags := -Wl,--build-id=sha1
 
 ifneq (,$(call lt,$(APP_PLATFORM_LEVEL),29))
     # https://github.com/android/ndk/issues/1196
-    linker_ldflags += -Wl,--no-rosegment
+    # cmjo : commenting
+    #linker_ldflags += -Wl,--no-rosegment
 endif
 
 my_ldflags := $(TARGET_LDFLAGS) $(linker_ldflags) $(NDK_APP_LDFLAGS) $(LOCAL_LDFLAGS)
