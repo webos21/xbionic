@@ -502,5 +502,9 @@ extern "C" void* __memcpy_chk(void* dst, const void* src, size_t count, size_t d
 extern "C" void* __mempcpy_chk(void* dst, const void* src, size_t count, size_t dst_len) {
   __check_count("mempcpy", "count", count);
   __check_buffer_access("mempcpy", "write into", count, dst_len);
+#ifdef __APPLE__
+  return ((char *) memcpy(dst, src, count) + count);
+#else // !__APPLE__
   return mempcpy(dst, src, count);
+#endif
 }

@@ -26,9 +26,6 @@
 
 LOCAL_PATH := $(call my-dir)
 
-$(call __ndk_info,LOCAL_PATH   = '$(LOCAL_PATH)')
-
-
 # Variables : libc_common_src_files
 libc_common_src_files =          \
     bionic/ether_aton.c          \
@@ -68,8 +65,8 @@ libc_common_flags = \
     -Werror=type-limits             \
     -Werror                         
 ifneq ($(TARGET_ARCH),x86_64)
-libc_common_flags += \
-    -Wexit-time-destructors
+libc_common_flags +=        \
+    -Wexit-time-destructors \
     -fno-emulated-tls
 endif
 
@@ -105,9 +102,9 @@ libc_jemalloc_wrapper =  bionic/jemalloc_wrapper.cpp
 
 include $(CLEAR_VARS)
 
-LOCAL_MODULE    := libc_jemalloc_wrapper
-LOCAL_CFLAGS    := $(libc_defaults) -fvisibility=hidden
-LOCAL_SRC_FILES := bionic/jemalloc_wrapper.cpp
+LOCAL_MODULE     := libc_jemalloc_wrapper
+LOCAL_CFLAGS     := $(libc_defaults) -fvisibility=hidden
+LOCAL_SRC_FILES  := bionic/jemalloc_wrapper.cpp
 
 include $(BUILD_STATIC_LIBRARY)
 
@@ -130,12 +127,11 @@ libc_bootstrap_src_files += \
     arch-arm64/bionic/__set_tls.c
 endif
 
-
 include $(CLEAR_VARS)
 
-LOCAL_MODULE    := libc_bootstrap
-LOCAL_CFLAGS    := $(libc_defaults) -fno-stack-protector -ffreestanding
-LOCAL_SRC_FILES := $(libc_bootstrap_src_files)
+LOCAL_MODULE     := libc_bootstrap
+LOCAL_CFLAGS     := $(libc_defaults) -fno-stack-protector -ffreestanding
+LOCAL_SRC_FILES  := $(libc_bootstrap_src_files)
 
 include $(BUILD_STATIC_LIBRARY)
 
@@ -146,9 +142,9 @@ include $(BUILD_STATIC_LIBRARY)
 
 include $(CLEAR_VARS)
 
-LOCAL_MODULE    := libc_init_static
-LOCAL_CFLAGS    := $(libc_defaults) -fno-stack-protector -ffreestanding
-LOCAL_SRC_FILES := bionic/libc_init_static.cpp
+LOCAL_MODULE     := libc_init_static
+LOCAL_CFLAGS     := $(libc_defaults) -fno-stack-protector -ffreestanding
+LOCAL_SRC_FILES  := bionic/libc_init_static.cpp
 
 include $(BUILD_STATIC_LIBRARY)
 
@@ -175,12 +171,10 @@ libc_tzcode_src_files =      \
     tzcode/bionic.cpp        \
     upstream-openbsd/lib/libc/time/wcsftime.c
 
-$(call __ndk_info,libc_tzcode_src_files   = '$(libc_tzcode_src_files)')
-
 include $(CLEAR_VARS)
 
-LOCAL_MODULE    := libc_tzcode
-LOCAL_CFLAGS    := $(libc_defaults)      \
+LOCAL_MODULE     := libc_tzcode
+LOCAL_CFLAGS     := $(libc_defaults)      \
     -Wno-unused-parameter                \
     -DALL_STATE                          \
     -DSTD_INSPIRED                       \
@@ -191,9 +185,10 @@ LOCAL_CFLAGS    := $(libc_defaults)      \
     -DUSG_COMPAT=1                       \
     -DWILDABBR="\"\""                    \
     -DNO_RUN_TIME_WARNINGS_ABOUT_YEAR_2000_PROBLEMS_THANK_YOU \
-    -Dlint                               \
-    -I$(LOCAL_PATH)/tzcode
-LOCAL_SRC_FILES := $(libc_tzcode_src_files)
+    -Dlint
+LOCAL_C_INCLUDES := \
+    $(LOCAL_PATH)/tzcode
+LOCAL_SRC_FILES  := $(libc_tzcode_src_files)
 
 include $(BUILD_STATIC_LIBRARY)
 
@@ -207,23 +202,22 @@ libc_dns_src_files =  \
     upstream-netbsd/lib/libc/isc/ev_streams.c \
     upstream-netbsd/lib/libc/isc/ev_timers.c
 
-$(call __ndk_info,libc_dns_src_files   = '$(libc_dns_src_files)')
-
 include $(CLEAR_VARS)
 
-LOCAL_MODULE    := libc_dns
-LOCAL_CFLAGS    := $(libc_defaults)      \
+LOCAL_MODULE     := libc_dns
+LOCAL_CFLAGS     := $(libc_defaults)      \
     -DANDROID_CHANGES                    \
     -DINET6                              \
     -Wno-unused-parameter                \
     -include netbsd-compat.h             \
     -Wframe-larger-than=66000            \
-    -include private/bsd_sys_param.h     \
-    -I$(LOCAL_PATH)/dns/include          \
-    -I$(LOCAL_PATH)/private              \
-    -I$(LOCAL_PATH)/upstream-netbsd/lib/libc/include \
-    -I$(LOCAL_PATH)/upstream-netbsd/android/include
-LOCAL_SRC_FILES := $(libc_dns_src_files)
+    -include private/bsd_sys_param.h
+LOCAL_C_INCLUDES :=  \
+    $(LOCAL_PATH)/dns/include      \
+    $(LOCAL_PATH)/private          \
+    $(LOCAL_PATH)/upstream-netbsd/lib/libc/include \
+    $(LOCAL_PATH)/upstream-netbsd/android/include
+LOCAL_SRC_FILES  := $(libc_dns_src_files)
 
 include $(BUILD_STATIC_LIBRARY)
 
@@ -233,57 +227,68 @@ include $(BUILD_STATIC_LIBRARY)
 #-----------------------------------------------------------------------
 
 libc_freebsd_src_files = \
-    upstream-freebsd/lib/libc/gen/ldexp.c             \
-    upstream-freebsd/lib/libc/stdlib/getopt_long.c    \
-    upstream-freebsd/lib/libc/stdlib/hcreate.c        \
-    upstream-freebsd/lib/libc/stdlib/hcreate_r.c      \
-    upstream-freebsd/lib/libc/stdlib/hdestroy_r.c     \
-    upstream-freebsd/lib/libc/stdlib/hsearch_r.c      \
-    upstream-freebsd/lib/libc/stdlib/qsort.c          \
-    upstream-freebsd/lib/libc/stdlib/quick_exit.c     \
-    upstream-freebsd/lib/libc/string/wcpcpy.c         \
-    upstream-freebsd/lib/libc/string/wcpncpy.c        \
-    upstream-freebsd/lib/libc/string/wcscasecmp.c     \
-    upstream-freebsd/lib/libc/string/wcscspn.c        \
-    upstream-freebsd/lib/libc/string/wcsdup.c         \
-    upstream-freebsd/lib/libc/string/wcslcat.c        \
-    upstream-freebsd/lib/libc/string/wcsncasecmp.c    \
-    upstream-freebsd/lib/libc/string/wcsncat.c        \
-    upstream-freebsd/lib/libc/string/wcsncmp.c        \
-    upstream-freebsd/lib/libc/string/wcsncpy.c        \
-    upstream-freebsd/lib/libc/string/wcsnlen.c        \
-    upstream-freebsd/lib/libc/string/wcspbrk.c        \
-    upstream-freebsd/lib/libc/string/wcsspn.c         \
-    upstream-freebsd/lib/libc/string/wcsstr.c         \
-    upstream-freebsd/lib/libc/string/wcstok.c         \
-    upstream-freebsd/lib/libc/string/wmemchr.c        \
-    upstream-freebsd/lib/libc/string/wmemcpy.c
-
-ifneq ($(TARGET_ARCH),arm64)
-libc_freebsd_src_files += \
-    upstream-freebsd/lib/libc/string/wmemmove.c
-endif
-ifneq ($(TARGET_ARCH),x86)
-libc_freebsd_src_files += \
-    upstream-freebsd/lib/libc/string/wcschr.c         \
-    upstream-freebsd/lib/libc/string/wcscmp.c         \
-    upstream-freebsd/lib/libc/string/wcslen.c         \
-    upstream-freebsd/lib/libc/string/wcsrchr.c        \
-    upstream-freebsd/lib/libc/string/wmemcmp.c        \
-    upstream-freebsd/lib/libc/string/wcscat.c         \
-    upstream-freebsd/lib/libc/string/wcscpy.c         \
+    upstream-freebsd/lib/libc/gen/ldexp.c           \
+    upstream-freebsd/lib/libc/stdlib/getopt_long.c  \
+    upstream-freebsd/lib/libc/stdlib/hcreate.c      \
+    upstream-freebsd/lib/libc/stdlib/hcreate_r.c    \
+    upstream-freebsd/lib/libc/stdlib/hdestroy_r.c   \
+    upstream-freebsd/lib/libc/stdlib/hsearch_r.c    \
+    upstream-freebsd/lib/libc/stdlib/qsort.c        \
+    upstream-freebsd/lib/libc/stdlib/quick_exit.c   \
+    upstream-freebsd/lib/libc/string/wcpcpy.c       \
+    upstream-freebsd/lib/libc/string/wcpncpy.c      \
+    upstream-freebsd/lib/libc/string/wcscasecmp.c   \
+    upstream-freebsd/lib/libc/string/wcscat.c       \
+    upstream-freebsd/lib/libc/string/wcschr.c       \
+    upstream-freebsd/lib/libc/string/wcscmp.c       \
+    upstream-freebsd/lib/libc/string/wcscpy.c       \
+    upstream-freebsd/lib/libc/string/wcscspn.c      \
+    upstream-freebsd/lib/libc/string/wcsdup.c       \
+    upstream-freebsd/lib/libc/string/wcslcat.c      \
+    upstream-freebsd/lib/libc/string/wcslen.c       \
+    upstream-freebsd/lib/libc/string/wcsncasecmp.c  \
+    upstream-freebsd/lib/libc/string/wcsncat.c      \
+    upstream-freebsd/lib/libc/string/wcsncmp.c      \
+    upstream-freebsd/lib/libc/string/wcsncpy.c      \
+    upstream-freebsd/lib/libc/string/wcsnlen.c      \
+    upstream-freebsd/lib/libc/string/wcspbrk.c      \
+    upstream-freebsd/lib/libc/string/wcsrchr.c      \
+    upstream-freebsd/lib/libc/string/wcsspn.c       \
+    upstream-freebsd/lib/libc/string/wcsstr.c       \
+    upstream-freebsd/lib/libc/string/wcstok.c       \
+    upstream-freebsd/lib/libc/string/wmemchr.c      \
+    upstream-freebsd/lib/libc/string/wmemcmp.c      \
+    upstream-freebsd/lib/libc/string/wmemcpy.c      \
+    upstream-freebsd/lib/libc/string/wmemmove.c     \
     upstream-freebsd/lib/libc/string/wmemset.c
+ifeq ($(TARGET_ARCH),arm64)
+libc_freebsd_src_files := $(filter-out          \
+    upstream-freebsd/lib/libc/string/wmemmove.c \
+    ,$(libc_freebsd_src_files))
+endif
+ifeq ($(TARGET_ARCH),x86)
+libc_freebsd_src_files := $(filter-out          \
+    upstream-freebsd/lib/libc/string/wcschr.c   \
+    upstream-freebsd/lib/libc/string/wcscmp.c   \
+    upstream-freebsd/lib/libc/string/wcslen.c   \
+    upstream-freebsd/lib/libc/string/wcsrchr.c  \
+    upstream-freebsd/lib/libc/string/wmemcmp.c  \
+    upstream-freebsd/lib/libc/string/wcscat.c   \
+    upstream-freebsd/lib/libc/string/wcscpy.c   \
+    upstream-freebsd/lib/libc/string/wmemset.c  \
+    , $(libc_freebsd_src_files))
 endif
 
 include $(CLEAR_VARS)
 
-LOCAL_MODULE    := libc_freebsd
-LOCAL_CFLAGS    := $(libc_defaults)      \
+LOCAL_MODULE     := libc_freebsd
+LOCAL_CFLAGS     := $(libc_defaults)     \
     -Wno-sign-compare                    \
     -Wno-unused-parameter                \
-    -include freebsd-compat.h            \
-    -I$(LOCAL_PATH)/upstream-freebsd/android/include
-LOCAL_SRC_FILES := $(libc_freebsd_src_files)
+    -include freebsd-compat.h
+LOCAL_C_INCLUDES :=  \
+    $(LOCAL_PATH)/upstream-freebsd/android/include
+LOCAL_SRC_FILES  := $(libc_freebsd_src_files)
 
 include $(BUILD_STATIC_LIBRARY)
 
@@ -298,8 +303,9 @@ LOCAL_MODULE    := libc_freebsd_large_stack
 LOCAL_CFLAGS    := $(libc_defaults)      \
     -Wno-sign-compare                    \
     -include freebsd-compat.h            \
-    -Wframe-larger-than=66000            \
-    -I$(LOCAL_PATH)/upstream-freebsd/android/include
+    -Wframe-larger-than=66000
+LOCAL_C_INCLUDES :=  \
+    $(LOCAL_PATH)/upstream-freebsd/android/include
 LOCAL_SRC_FILES := upstream-freebsd/lib/libc/gen/glob.c
 
 include $(BUILD_STATIC_LIBRARY)
@@ -340,9 +346,10 @@ LOCAL_CFLAGS    := $(libc_defaults)      \
     -Wno-sign-compare                    \
     -Wno-unused-parameter                \
     -DPOSIX_MISTAKE                      \
-    -include netbsd-compat.h             \
-    -I$(LOCAL_PATH)/upstream-netbsd/android/include    \
-    -I$(LOCAL_PATH)/upstream-netbsd/lib/libc/include
+    -include netbsd-compat.h
+LOCAL_C_INCLUDES :=  \
+    $(LOCAL_PATH)/upstream-netbsd/android/include    \
+    $(LOCAL_PATH)/upstream-netbsd/lib/libc/include
 LOCAL_SRC_FILES := $(libc_netbsd_src_files)
 
 include $(BUILD_STATIC_LIBRARY)
@@ -459,12 +466,13 @@ LOCAL_MODULE    := libc_openbsd_ndk
 LOCAL_CFLAGS    := $(libc_defaults)      \
     -Wno-sign-compare                    \
     -Wno-unused-parameter                \
-    -include openbsd-compat.h            \
-    -I$(LOCAL_PATH)/private              \
-    -I$(LOCAL_PATH)/stdio                \
-    -I$(LOCAL_PATH)/upstream-openbsd/android/include  \
-    -I$(LOCAL_PATH)/upstream-openbsd/lib/libc/include \
-    -I$(LOCAL_PATH)/upstream-openbsd/lib/libc/gdtoa/
+    -include openbsd-compat.h
+LOCAL_C_INCLUDES :=  \
+    $(LOCAL_PATH)/private                \
+    $(LOCAL_PATH)/stdio                  \
+    $(LOCAL_PATH)/upstream-openbsd/android/include  \
+    $(LOCAL_PATH)/upstream-openbsd/lib/libc/include \
+    $(LOCAL_PATH)/upstream-openbsd/lib/libc/gdtoa
 LOCAL_SRC_FILES := $(libc_openbsd_src_files)
 
 include $(BUILD_STATIC_LIBRARY)
@@ -487,12 +495,13 @@ LOCAL_CFLAGS    := $(libc_defaults)      \
     -D_GNU_SOURCE -D__ANDROID_API__=26   \
     -include openbsd-compat.h            \
     -Wno-sign-compare                    \
-    -Wframe-larger-than=5000             \
-    -I$(LOCAL_PATH)/private              \
-    -I$(LOCAL_PATH)/upstream-openbsd/android/include   \
-    -I$(LOCAL_PATH)/upstream-openbsd/lib/libc/include  \
-    -I$(LOCAL_PATH)/upstream-openbsd/lib/libc/gdtoa    \
-    -I$(LOCAL_PATH)/upstream-openbsd/lib/libc/stdio
+    -Wframe-larger-than=5000
+LOCAL_C_INCLUDES :=  \
+    $(LOCAL_PATH)/private                            \
+    $(LOCAL_PATH)/upstream-openbsd/android/include   \
+    $(LOCAL_PATH)/upstream-openbsd/lib/libc/include  \
+    $(LOCAL_PATH)/upstream-openbsd/lib/libc/gdtoa    \
+    $(LOCAL_PATH)/upstream-openbsd/lib/libc/stdio
 LOCAL_SRC_FILES := $(libc_openbsd_large_stack_src_files)
 
 include $(BUILD_STATIC_LIBRARY)
@@ -505,31 +514,61 @@ include $(BUILD_STATIC_LIBRARY)
 libc_openbsd_src_files = \
     upstream-openbsd/lib/libc/crypt/arc4random.c          \
     upstream-openbsd/lib/libc/crypt/arc4random_uniform.c  \
-    upstream-openbsd/lib/libc/string/stpncpy.c            \
-    upstream-openbsd/lib/libc/string/strcat.c             \
-    upstream-openbsd/lib/libc/string/strlcat.c            \
-    upstream-openbsd/lib/libc/string/strlcpy.c            \
-    upstream-openbsd/lib/libc/string/strncat.c            \
-    upstream-openbsd/lib/libc/string/strncpy.c
-
-ifneq ($(TARGET_ARCH),arm64)
-libc_openbsd_src_files += \
     upstream-openbsd/lib/libc/string/memchr.c             \
     upstream-openbsd/lib/libc/string/memrchr.c            \
     upstream-openbsd/lib/libc/string/stpcpy.c             \
-    upstream-openbsd/lib/libc/string/strcpy.c             \
-    upstream-openbsd/lib/libc/string/strncmp.c
-endif
-ifneq ($(TARGET_ARCH),x86_64)
-libc_openbsd_src_files += \
-    upstream-openbsd/lib/libc/string/stpcpy.c             \
     upstream-openbsd/lib/libc/string/stpncpy.c            \
     upstream-openbsd/lib/libc/string/strcat.c             \
     upstream-openbsd/lib/libc/string/strcpy.c             \
+    upstream-openbsd/lib/libc/string/strlcat.c            \
+    upstream-openbsd/lib/libc/string/strlcpy.c            \
     upstream-openbsd/lib/libc/string/strncat.c            \
     upstream-openbsd/lib/libc/string/strncmp.c            \
     upstream-openbsd/lib/libc/string/strncpy.c
+ifeq ($(TARGET_ARCH),arm)
+libc_openbsd_src_files := $(filter-out          \
+    upstream-openbsd/lib/libc/string/strcpy.c   \
+    upstream-openbsd/lib/libc/string/stpcpy.c   \
+    upstream-openbsd/lib/libc/string/strcat.c   \
+    ,$(libc_openbsd_src_files))
 endif
+ifeq ($(TARGET_ARCH),arm64)
+libc_openbsd_src_files := $(filter-out          \
+    upstream-openbsd/lib/libc/string/memchr.c   \
+    upstream-openbsd/lib/libc/string/memrchr.c  \
+    upstream-openbsd/lib/libc/string/stpcpy.c   \
+    upstream-openbsd/lib/libc/string/strcpy.c   \
+    upstream-openbsd/lib/libc/string/strncmp.c  \
+    ,$(libc_openbsd_src_files))
+endif
+ifeq ($(TARGET_ARCH),x86)
+libc_openbsd_src_files := $(filter-out          \
+    upstream-openbsd/lib/libc/string/memchr.c   \
+    upstream-openbsd/lib/libc/string/memrchr.c  \
+    upstream-openbsd/lib/libc/string/stpcpy.c   \
+    upstream-openbsd/lib/libc/string/stpncpy.c  \
+    upstream-openbsd/lib/libc/string/strcat.c   \
+    upstream-openbsd/lib/libc/string/strcpy.c   \
+    upstream-openbsd/lib/libc/string/strncmp.c  \
+    upstream-openbsd/lib/libc/string/strncpy.c  \
+    upstream-openbsd/lib/libc/string/strlcat.c  \
+    upstream-openbsd/lib/libc/string/strlcpy.c  \
+    upstream-openbsd/lib/libc/string/strncat.c  \
+    ,$(libc_openbsd_src_files))
+endif
+ifeq ($(TARGET_ARCH),x86_64)
+libc_openbsd_src_files := $(filter-out          \
+    upstream-openbsd/lib/libc/string/stpcpy.c   \
+    upstream-openbsd/lib/libc/string/stpncpy.c  \
+    upstream-openbsd/lib/libc/string/strcat.c   \
+    upstream-openbsd/lib/libc/string/strcpy.c   \
+    upstream-openbsd/lib/libc/string/strncat.c  \
+    upstream-openbsd/lib/libc/string/strncmp.c  \
+    upstream-openbsd/lib/libc/string/strncpy.c  \
+    ,$(libc_openbsd_src_files))
+endif
+
+$(call __ndk_info,libc_openbsd_src_files = '$(libc_openbsd_src_files)')
 
 include $(CLEAR_VARS)
 
@@ -538,9 +577,10 @@ LOCAL_CFLAGS    := $(libc_defaults)      \
     -D_GNU_SOURCE -D__ANDROID_API__=26   \
     -Wno-sign-compare                    \
     -Wno-unused-parameter                \
-    -include openbsd-compat.h            \
-    -I$(LOCAL_PATH)/private              \
-    -I$(LOCAL_PATH)/upstream-openbsd/android/include
+    -include openbsd-compat.h
+LOCAL_C_INCLUDES :=  \
+    $(LOCAL_PATH)/private              \
+    $(LOCAL_PATH)/upstream-openbsd/android/include
 LOCAL_SRC_FILES := $(libc_openbsd_src_files)
 
 include $(BUILD_STATIC_LIBRARY)
@@ -575,11 +615,11 @@ include $(CLEAR_VARS)
 LOCAL_MODULE    := libc_gdtoa
 LOCAL_CFLAGS    := $(libc_defaults)      \
     -Wno-sign-compare                    \
-    -include openbsd-compat.h            \
-    -I$(LOCAL_PATH)/private              \
-    -I$(LOCAL_PATH)/upstream-openbsd/android/include \
-    -I$(LOCAL_PATH)/upstream-openbsd/lib/libc/include
-
+    -include openbsd-compat.h
+LOCAL_C_INCLUDES :=  \
+    $(LOCAL_PATH)/private              \
+    $(LOCAL_PATH)/upstream-openbsd/android/include \
+    $(LOCAL_PATH)/upstream-openbsd/lib/libc/include
 LOCAL_SRC_FILES := $(libc_gdtoa_src_files)
 
 include $(BUILD_STATIC_LIBRARY)
@@ -591,6 +631,22 @@ include $(BUILD_STATIC_LIBRARY)
 
 libc_fortify_src_files = \
     bionic/fortify.cpp
+ifeq ($(TARGET_ARCH),arm)
+libc_fortify_src_files += \
+    arch-arm/generic/bionic/__memcpy_chk.S     \
+    arch-arm/cortex-a15/bionic/__strcat_chk.S  \
+    arch-arm/cortex-a15/bionic/__strcpy_chk.S  \
+    arch-arm/cortex-a7/bionic/__strcat_chk.S   \
+    arch-arm/cortex-a7/bionic/__strcpy_chk.S   \
+    arch-arm/cortex-a9/bionic/__strcat_chk.S   \
+    arch-arm/cortex-a9/bionic/__strcpy_chk.S   \
+    arch-arm/krait/bionic/__strcat_chk.S       \
+    arch-arm/krait/bionic/__strcpy_chk.S       \
+    arch-arm/cortex-a53/bionic/__strcat_chk.S  \
+    arch-arm/cortex-a53/bionic/__strcpy_chk.S  \
+    arch-arm/cortex-a55/bionic/__strcat_chk.S  \
+    arch-arm/cortex-a55/bionic/__strcpy_chk.S
+endif
 ifeq ($(TARGET_ARCH),arm64)
 libc_fortify_src_files += \
     arch-arm64/generic/bionic/__memcpy_chk.S
@@ -599,6 +655,12 @@ endif
 libc_fortify_cflags = \
     -U_FORTIFY_SOURCE                   \
     -D__BIONIC_DECLARE_FORTIFY_HELPERS
+ifeq ($(TARGET_ARCH),arm)
+libc_fortify_cflags += \
+    -DNO___MEMCPY_CHK      \
+    -DRENAME___STRCAT_CHK  \
+    -DRENAME___STRCPY_CHK
+endif
 ifeq ($(TARGET_ARCH),arm64)
 libc_fortify_cflags += \
     -DNO___MEMCPY_CHK
