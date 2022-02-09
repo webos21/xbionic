@@ -1564,6 +1564,8 @@ endef
 #             2: target object file (without path)
 # Returns   : None
 # Usage     : $(eval $(call ev-compile-s-source,<srcfile>,<objfile>)
+#
+# cmjo fix  : add -D__ASSEMBLY__
 # -----------------------------------------------------------------------------
 define  ev-compile-s-source
 _SRC:=$$(call local-source-file-path,$(1))
@@ -1571,7 +1573,7 @@ _OBJ:=$$(LOCAL_OBJS_DIR:%/=%)/$(2)
 
 _FLAGS := \
     $$(GLOBAL_CFLAGS) \
-    $$(TARGET_CFLAGS) \
+    $$(TARGET_CFLAGS) -D__ASSEMBLY__ \
     $$(call get-src-file-target-cflags,$(1)) \
     $$(call host-c-includes,$$(LOCAL_C_INCLUDES) $$(LOCAL_PATH)) \
     $$(NDK_APP_CFLAGS) \

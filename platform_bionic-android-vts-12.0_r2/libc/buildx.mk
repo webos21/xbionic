@@ -492,9 +492,9 @@ include $(CLEAR_VARS)
 
 LOCAL_MODULE    := libc_openbsd_large_stack
 LOCAL_CFLAGS    := $(libc_defaults)      \
-    -D_GNU_SOURCE -D__ANDROID_API__=26   \
-    -include openbsd-compat.h            \
-    -Wno-sign-compare                    \
+    -D_GNU_SOURCE -D__ANDROID_API__=$(TARGET_PLATFORM_LEVEL)   \
+    -include openbsd-compat.h                                  \
+    -Wno-sign-compare                                          \
     -Wframe-larger-than=5000
 LOCAL_C_INCLUDES :=  \
     $(LOCAL_PATH)/private                            \
@@ -574,9 +574,9 @@ include $(CLEAR_VARS)
 
 LOCAL_MODULE    := libc_openbsd
 LOCAL_CFLAGS    := $(libc_defaults)      \
-    -D_GNU_SOURCE -D__ANDROID_API__=26   \
-    -Wno-sign-compare                    \
-    -Wno-unused-parameter                \
+    -D_GNU_SOURCE -D__ANDROID_API__=$(TARGET_PLATFORM_LEVEL)   \
+    -Wno-sign-compare                                          \
+    -Wno-unused-parameter                                      \
     -include openbsd-compat.h
 LOCAL_C_INCLUDES :=  \
     $(LOCAL_PATH)/private              \
@@ -653,7 +653,7 @@ libc_fortify_src_files += \
 endif
 
 libc_fortify_cflags = \
-    -U_FORTIFY_SOURCE                   \
+    -U_FORTIFY_SOURCE \
     -D__BIONIC_DECLARE_FORTIFY_HELPERS
 ifeq ($(TARGET_ARCH),arm)
 libc_fortify_cflags += \

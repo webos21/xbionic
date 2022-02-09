@@ -57,6 +57,11 @@
 #endif
 
 #undef __bionic_asm_custom_note_gnu_section
+
+/* cmjo : modified */
+#ifdef __APPLE__
+#define __bionic_asm_custom_note_gnu_section()
+#else
 #define __bionic_asm_custom_note_gnu_section() \
     .pushsection .note.gnu.property, "a"; \
     .balign 8; \
@@ -70,6 +75,7 @@
            __bionic_asm_aarch64_feature_bti); \
     .long 0; \
     .popsection;
+#endif
 
 #define NT_MEMTAG_LEVEL_MASK 3
 #define NT_MEMTAG_LEVEL_DEFAULT 0

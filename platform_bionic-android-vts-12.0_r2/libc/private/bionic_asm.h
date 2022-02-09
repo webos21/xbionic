@@ -49,21 +49,37 @@
 #include <private/bionic_asm_x86_64.h>
 #endif
 
+/* cmjo : modified */
+#ifdef __APPLE__
+#define ENTRY_NO_DWARF(f) \
+    .text; \
+    .globl f; \
+    .balign __bionic_asm_align; \
+    f: \
+    __bionic_asm_custom_entry(f); 
+#else
 #define ENTRY_NO_DWARF(f) \
     .text; \
     .globl f; \
     .balign __bionic_asm_align; \
     .type f, __bionic_asm_function_type; \
     f: \
-    __bionic_asm_custom_entry(f); \
+    __bionic_asm_custom_entry(f); 
+#endif
 
 #define ENTRY(f) \
     ENTRY_NO_DWARF(f) \
     .cfi_startproc \
 
+/* cmjo : modified */
+#ifdef __APPLE__
+#define END_NO_DWARF(f) \
+    __bionic_asm_custom_end(f)
+#else
 #define END_NO_DWARF(f) \
     .size f, .-f; \
-    __bionic_asm_custom_end(f) \
+    __bionic_asm_custom_end(f)
+#endif
 
 #define END(f) \
     .cfi_endproc; \
