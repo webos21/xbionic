@@ -674,3 +674,183 @@ LOCAL_CFLAGS    := $(libc_defaults)      \
 LOCAL_SRC_FILES := $(libc_fortify_src_files)
 
 include $(BUILD_STATIC_LIBRARY)
+
+
+
+#-----------------------------------------------------------------------
+# libc_bionic.a - home-grown C library code
+#-----------------------------------------------------------------------
+
+libc_bionic_src_files = \
+    bionic/sysconf.cpp                     \
+    bionic/vdso.cpp                        \
+    bionic/setjmp_cookie.cpp               \
+    bionic/android_set_abort_message.cpp   \
+    bionic/strchr.cpp                      \
+    bionic/strchrnul.cpp                   \
+    bionic/strnlen.c                       \
+    bionic/strrchr.cpp
+
+ifeq ($(TARGET_ARCH),arm)
+libc_bionic_src_files += \
+    arch-arm/generic/bionic/memcmp.S            \
+    arch-arm/generic/bionic/memmove.S           \
+    arch-arm/generic/bionic/memset.S            \
+    arch-arm/generic/bionic/stpcpy.c            \
+    arch-arm/generic/bionic/strcat.c            \
+    arch-arm/generic/bionic/strcmp.S            \
+    arch-arm/generic/bionic/strcpy.S            \
+    arch-arm/generic/bionic/strlen.c            \
+    arch-arm/bionic/__aeabi_read_tp.S           \
+    arch-arm/bionic/__bionic_clone.S            \
+    arch-arm/bionic/__restore.S                 \
+    arch-arm/bionic/_exit_with_stack_teardown.S \
+    arch-arm/bionic/atomics_arm.c               \
+    arch-arm/bionic/bpabi.c                     \
+    arch-arm/bionic/libcrt_compat.c             \
+    arch-arm/bionic/popcount_tab.c              \
+    arch-arm/bionic/setjmp.S                    \
+    arch-arm/bionic/syscall.S                   \
+    arch-arm/bionic/vfork.S                     \
+    arch-arm/cortex-a15/bionic/memcpy.S         \
+    arch-arm/cortex-a15/bionic/memmove.S        \
+    arch-arm/cortex-a15/bionic/memset.S         \
+    arch-arm/cortex-a15/bionic/stpcpy.S         \
+    arch-arm/cortex-a15/bionic/strcat.S         \
+    arch-arm/cortex-a15/bionic/strcmp.S         \
+    arch-arm/cortex-a15/bionic/strcpy.S         \
+    arch-arm/cortex-a15/bionic/strlen.S         \
+    arch-arm/cortex-a7/bionic/memcpy.S          \
+    arch-arm/cortex-a7/bionic/memset.S          \
+    arch-arm/cortex-a9/bionic/memcpy.S          \
+    arch-arm/cortex-a9/bionic/memset.S          \
+    arch-arm/cortex-a9/bionic/stpcpy.S          \
+    arch-arm/cortex-a9/bionic/strcat.S          \
+    arch-arm/cortex-a9/bionic/strcpy.S          \
+    arch-arm/cortex-a9/bionic/strlen.S          \
+    arch-arm/krait/bionic/memcpy.S              \
+    arch-arm/krait/bionic/memset.S              \
+    arch-arm/cortex-a53/bionic/memcpy.S         \
+    arch-arm/cortex-a55/bionic/memcpy.S         \
+    arch-arm/kryo/bionic/memcpy.S
+endif
+
+ifeq ($(TARGET_ARCH),arm64)
+libc_bionic_src_files += \
+    arch-arm64/generic/bionic/memcpy.S            \
+    arch-arm64/generic/bionic/memmove.S           \
+    arch-arm64/generic/bionic/memset.S            \
+    arch-arm64/generic/bionic/wmemmove.S          \
+    arch-arm64/bionic/__bionic_clone.S            \
+    arch-arm64/bionic/_exit_with_stack_teardown.S \
+    arch-arm64/bionic/setjmp.S                    \
+    arch-arm64/bionic/syscall.S                   \
+    arch-arm64/bionic/vfork.S
+libc_bionic_src_files := $(filter-out  \
+    bionic/__memcpy_chk.cpp            \
+    bionic/strchr.cpp                  \
+    bionic/strchrnul.cpp               \
+    bionic/strnlen.c                   \
+    bionic/strrchr.cpp                 \
+    ,$(libc_bionic_src_files))
+endif
+
+ifeq ($(TARGET_ARCH),x86)
+libc_bionic_src_files += \
+    arch-x86/generic/string/memcmp.S              \
+    arch-x86/generic/string/strcmp.S              \
+    arch-x86/generic/string/strncmp.S             \
+    arch-x86/generic/string/strcat.S              \
+    arch-x86/generic/string/strlcat.c             \
+    arch-x86/generic/string/strlcpy.c             \
+    arch-x86/generic/string/strncat.c             \
+    arch-x86/generic/string/wcscat.c              \
+    arch-x86/generic/string/wcscpy.c              \
+    arch-x86/generic/string/wmemcmp.c             \
+    arch-x86/generic/string/wmemset.c             \
+    arch-x86/atom/string/sse2-memchr-atom.S       \
+    arch-x86/atom/string/sse2-memrchr-atom.S      \
+    arch-x86/atom/string/sse2-strchr-atom.S       \
+    arch-x86/atom/string/sse2-strnlen-atom.S      \
+    arch-x86/atom/string/sse2-strrchr-atom.S      \
+    arch-x86/atom/string/sse2-wcschr-atom.S       \
+    arch-x86/atom/string/sse2-wcsrchr-atom.S      \
+    arch-x86/atom/string/sse2-wcslen-atom.S       \
+    arch-x86/atom/string/sse2-wcscmp-atom.S       \
+    arch-x86/silvermont/string/sse2-memmove-slm.S \
+    arch-x86/silvermont/string/sse2-memset-slm.S  \
+    arch-x86/silvermont/string/sse2-stpcpy-slm.S  \
+    arch-x86/silvermont/string/sse2-stpncpy-slm.S \
+    arch-x86/silvermont/string/sse2-strcpy-slm.S  \
+    arch-x86/silvermont/string/sse2-strlen-slm.S  \
+    arch-x86/silvermont/string/sse2-strncpy-slm.S \
+    arch-x86/bionic/__bionic_clone.S              \
+    arch-x86/bionic/_exit_with_stack_teardown.S   \
+    arch-x86/bionic/libcrt_compat.c               \
+    arch-x86/bionic/__restore.S                   \
+    arch-x86/bionic/setjmp.S                      \
+    arch-x86/bionic/syscall.S                     \
+    arch-x86/bionic/vfork.S                       \
+    arch-x86/bionic/__x86.get_pc_thunk.S          \
+    /* ssse3 functions */                         \
+    arch-x86/atom/string/ssse3-strcat-atom.S      \
+    arch-x86/atom/string/ssse3-strcmp-atom.S      \
+    arch-x86/atom/string/ssse3-strlcat-atom.S     \
+    arch-x86/atom/string/ssse3-strlcpy-atom.S     \
+    arch-x86/atom/string/ssse3-strncat-atom.S     \
+    arch-x86/atom/string/ssse3-strncmp-atom.S     \
+    arch-x86/atom/string/ssse3-wcscat-atom.S      \
+    arch-x86/atom/string/ssse3-wcscpy-atom.S      \
+    /* sse4 functions */                          \
+    arch-x86/silvermont/string/sse4-memcmp-slm.S  \
+    arch-x86/silvermont/string/sse4-wmemcmp-slm.S \
+    /* atom functions */                          \
+    arch-x86/atom/string/sse2-memset-atom.S       \
+    arch-x86/atom/string/sse2-strlen-atom.S       \
+    arch-x86/atom/string/ssse3-memcmp-atom.S      \
+    arch-x86/atom/string/ssse3-memmove-atom.S     \
+    arch-x86/atom/string/ssse3-strcpy-atom.S      \
+    arch-x86/atom/string/ssse3-strncpy-atom.S     \
+    arch-x86/atom/string/ssse3-wmemcmp-atom.S     \
+    /* avx2 functions */                          \
+    arch-x86/kabylake/string/avx2-wmemset-kbl.S
+libc_bionic_src_files := $(filter-out  \
+    bionic/strchr.cpp                  \
+    bionic/strnlen.c                   \
+    bionic/strrchr.cpp                 \
+    ,$(libc_bionic_src_files))
+endif
+
+ifeq ($(TARGET_ARCH),x86_64)
+libc_bionic_src_files += \
+    arch-x86_64/string/sse2-memmove-slm.S          \
+    arch-x86_64/string/sse2-memset-slm.S           \
+    arch-x86_64/string/sse2-stpcpy-slm.S           \
+    arch-x86_64/string/sse2-stpncpy-slm.S          \
+    arch-x86_64/string/sse2-strcat-slm.S           \
+    arch-x86_64/string/sse2-strcpy-slm.S           \
+    arch-x86_64/string/sse2-strlen-slm.S           \
+    arch-x86_64/string/sse2-strncat-slm.S          \
+    arch-x86_64/string/sse2-strncpy-slm.S          \
+    arch-x86_64/string/sse4-memcmp-slm.S           \
+    arch-x86_64/string/ssse3-strcmp-slm.S          \
+    arch-x86_64/string/ssse3-strncmp-slm.S         \
+    arch-x86_64/string/avx2-wmemset-kbl.S          \
+    arch-x86_64/bionic/__bionic_clone.S            \
+    arch-x86_64/bionic/_exit_with_stack_teardown.S \
+    arch-x86_64/bionic/__restore_rt.S              \
+    arch-x86_64/bionic/setjmp.S                    \
+    arch-x86_64/bionic/syscall.S                   \
+    arch-x86_64/bionic/vfork.S
+endif
+
+
+include $(CLEAR_VARS)
+
+LOCAL_MODULE    := libc_bionic
+LOCAL_CFLAGS    := $(libc_defaults)
+LOCAL_C_INCLUDES :=  \
+    $(LOCAL_PATH)/bionic/libstdc++/include
+LOCAL_SRC_FILES := $(libc_bionic_src_files)
+
+include $(BUILD_STATIC_LIBRARY)

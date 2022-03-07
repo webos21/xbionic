@@ -65,6 +65,8 @@ NDK_APP.bionic.APP_MODULES := \
     c_openbsd_large_stack     \
     c_openbsd                 \
     c_gdtoa                   \
+    c_fortify                 \
+    c_bionic                  \
 
 NDK_APP.bionic.APP_PROJECT_PATH := $(basedir)/apps/bionic/project
 

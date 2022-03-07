@@ -92,7 +92,11 @@ ENTRY(memmove)
 	sub	tmp1, dstin, src
 	cmp	count, 96
 	ccmp	tmp1, count, 2, hi
+#ifdef __APPLE__
+	b.hs	memcpy
+#else
 	b.hs	__memcpy
+#endif
 
 	cbz	tmp1, 3f
 	add	dstend, dstin, count
@@ -148,6 +152,8 @@ ENTRY(memmove)
 
 #if defined(WMEMMOVE)
 END(wmemmove)
+
+ALIAS_SYMBOL(memcpy, wmemmove)
 #else
 END(memmove)
 

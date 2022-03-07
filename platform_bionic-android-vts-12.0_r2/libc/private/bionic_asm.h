@@ -81,26 +81,54 @@
     __bionic_asm_custom_end(f)
 #endif
 
+#ifdef __APPLE__
+#define END(f) \
+    .cfi_endproc %% \
+    END_NO_DWARF(f) \
+
+#else
 #define END(f) \
     .cfi_endproc; \
     END_NO_DWARF(f) \
 
+#endif
+
 /* Like ENTRY, but with hidden visibility. */
+#ifdef __APPLE__
+#define ENTRY_PRIVATE(f) \
+    ENTRY(f) %% \
+
+#else
 #define ENTRY_PRIVATE(f) \
     ENTRY(f); \
     .hidden f \
 
+#endif
 /* Like ENTRY_NO_DWARF, but with hidden visibility. */
+#ifdef __APPLE__
+#define ENTRY_PRIVATE_NO_DWARF(f) \
+    ENTRY_NO_DWARF(f) %% \
+    .hidden f \
+
+#else
 #define ENTRY_PRIVATE_NO_DWARF(f) \
     ENTRY_NO_DWARF(f); \
     .hidden f \
 
+#endif
+
 #define __BIONIC_WEAK_ASM_FOR_NATIVE_BRIDGE(f) \
     .weak f; \
 
+#ifdef __APPLE__
+#define ALIAS_SYMBOL(alias, original) \
+    .globl alias %% \
+    .equ alias, original
+#else
 #define ALIAS_SYMBOL(alias, original) \
     .globl alias; \
     .equ alias, original
+#endif
 
 #define NOTE_GNU_PROPERTY() \
     __bionic_asm_custom_note_gnu_section()
