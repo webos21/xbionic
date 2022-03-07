@@ -52,11 +52,11 @@
 /* cmjo : modified */
 #ifdef __APPLE__
 #define ENTRY_NO_DWARF(f) \
-    .text; \
-    .globl f; \
-    .balign __bionic_asm_align; \
-    f: \
-    __bionic_asm_custom_entry(f); 
+    .text %% \
+    .globl f %% \
+    .balign __bionic_asm_align %% \
+    f: %% \
+    __bionic_asm_custom_entry(f) %%
 #else
 #define ENTRY_NO_DWARF(f) \
     .text; \
